@@ -1,0 +1,195 @@
+/* ========== GLOBAL RESET ========== */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Inter", Arial, sans-serif;
+  background: #f5f6f8;
+  color: #111827;
+}
+
+/* ========== APP WRAPPER ========== */
+.container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* ========== HEADER ========== */
+h1 {
+  font-size: 24px;
+  text-align: center;
+  margin-bottom: 15px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+/* ========== NAVIGATION ========== */
+nav {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+nav button {
+  padding: 10px 16px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+nav button:hover {
+  border-color: #2563eb;
+  color: #2563eb;
+  transform: translateY(-1px);
+}
+
+nav button.active {
+  background: #2563eb;
+  color: white;
+  border-color: #2563eb;
+}
+
+/* ========== MAIN PANEL ========== */
+main {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 22px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+}
+
+/* ========== CARDS ========== */
+.card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 16px;
+  transition: 0.2s ease;
+}
+
+.card:hover {
+  border-color: #d1d5db;
+  box-shadow: 0 8px 18px rgba(0,0,0,0.06);
+  transform: translateY(-2px);
+}
+
+/* ========== BUTTONS ========== */
+button {
+  transition: 0.2s ease;
+  font-weight: 500;
+}
+
+button:hover {
+  transform: translateY(-1px);
+}
+
+.btn-primary {
+  background: #2563eb;
+  color: white;
+  border: none;
+  padding: 10px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.btn-primary:hover {
+  background: #1d4ed8;
+}
+
+.btn-danger {
+  background: #ef4444;
+  color: white;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 8px;
+}
+
+.btn-warning {
+  background: #f59e0b;
+  color: white;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 8px;
+}
+
+/* ========== INPUTS (POS SAFE) ========== */
+input,
+select {
+  padding: 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  outline: none;
+  background: white;
+
+  /* 🔥 FIX: always visible text */
+  color: #000;
+  font-size: 14px;
+  transition: 0.2s;
+}
+
+input:focus,
+select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+/* ===== MODERN CALENDAR LOOK ===== */
+.calendar-input {
+  padding: 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  width: 150px;
+  cursor: pointer;
+  background: white;
+  color: #000;
+}
+
+/* ========== LIST ITEMS ========== */
+.list-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  margin-bottom: 8px;
+  background: white;
+  transition: 0.2s ease;
+}
+
+.list-item:hover {
+  background: #f9fafb;
+  transform: translateY(-1px);
+}
+
+/* ========== DASHBOARD STATS ========== */
+.stat-box {
+  background: white;
+  border: 1px solid #e5e7eb;
+  padding: 16px;
+  border-radius: 16px;
+  text-align: center;
+  transition: 0.2s ease;
+}
+
+.stat-box:hover {
+  box-shadow: 0 8px 16px rgba(0,0,0,0.05);
+  transform: translateY(-2px);
+}
+
+.stat-value {
+  font-size: 20px;
+  font-weight: bold;
+}
+
+.stat-label {
+  font-size: 13px;
+  color: #6b7280;
+}
