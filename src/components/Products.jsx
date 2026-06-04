@@ -5,7 +5,8 @@ export default function Products() {
   const [products, setProducts] = useState([]);
   const [editingId, setEditingId] = useState(null);
 
-  const role = localStorage.getItem("role") || "staff";
+  // ✅ FIXED ROLE DETECTION (MATCHES SALES.JSX)
+  const role = (localStorage.getItem("auth_role") || "staff").toLowerCase();
 
   const emptyProduct = {
     name: "",
@@ -245,7 +246,7 @@ export default function Products() {
   );
 }
 
-/* ================= STYLES (NO BACKGROUND CHANGE) ================= */
+/* ================= STYLES ================= */
 
 const styles = {
   container: {
