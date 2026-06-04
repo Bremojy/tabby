@@ -4,7 +4,8 @@ import { getData, saveData } from "../utils/storage";
 export default function Products() {
   const [products, setProducts] = useState([]);
   const [editingId, setEditingId] = useState(null);
-  const [role, setRole] = useState("staff");
+
+  const role = localStorage.getItem("role") || "staff";
 
   const emptyProduct = {
     name: "",
@@ -21,22 +22,8 @@ export default function Products() {
     setProducts(Array.isArray(data) ? data : []);
   }, []);
 
-  // 🔐 ROLE SWITCH
-  const handleRoleChange = () => {
-    if (role === "staff") {
-      const pw = prompt("Enter admin password:");
-      if (pw === "nimda") {
-        setRole("admin");
-        alert("✅ Admin mode enabled");
-      } else {
-        alert("❌ Wrong password");
-      }
-    } else {
-      setRole("staff");
-    }
-  };
+  /* ================= CRUD ================= */
 
-  // ✏️ EDIT START
   const startEditing = (product) => {
     if (role !== "admin") return alert("❌ Staff cannot edit products");
 
@@ -54,7 +41,6 @@ export default function Products() {
     setEditFields(emptyProduct);
   };
 
-  // 💾 SAVE EDIT
   const saveEdit = (id) => {
     const updated = products.map((p) =>
       p.id === id
@@ -73,7 +59,6 @@ export default function Products() {
     cancelEditing();
   };
 
-  // 🗑 DELETE
   const deleteProduct = (id) => {
     if (role !== "admin") return alert("❌ Staff cannot delete products");
 
@@ -82,13 +67,11 @@ export default function Products() {
     saveData("products", updated);
   };
 
-  // ➕ ADD PRODUCT (FIXED)
   const addProduct = () => {
     if (role !== "admin") return alert("❌ Staff cannot add products");
 
-    if (!newProduct.name.trim()) {
+    if (!newProduct.name.trim())
       return alert("Product name required");
-    }
 
     const product = {
       id: Date.now(),
@@ -99,89 +82,89 @@ export default function Products() {
     };
 
     const updated = [...products, product];
-
     setProducts(updated);
     saveData("products", updated);
-
     setNewProduct(emptyProduct);
   };
 
+  /* ================= UI ================= */
+
   return (
-    <div style={{ padding: 20 }}>
-      <h2>📦 Products</h2>
+    <div style={styles.container}>
+      {/* HEADER */}
+      <div style={styles.header}>
+        <h2>📦 Products</h2>
 
-      {/* ROLE */}
-      <button onClick={handleRoleChange}>
-        {role === "staff" ? "Switch to Admin" : "Switch to Staff"}
-      </button>
-
-      <span style={{ marginLeft: 10 }}>Role: {role.toUpperCase()}</span>
-
-      {/* ADD PRODUCT */}
-      {role === "admin" && (
-        <div
+        <span
           style={{
-            marginTop: 20,
-            padding: 15,
-            border: "1px solid #ddd",
-            borderRadius: 10,
-            background: "#fff",
+            ...styles.roleBadge,
+            background: role === "admin" ? "#7c3aed" : "#16a34a",
           }}
         >
-          <h3>➕ Add Product</h3>
+          {role.toUpperCase()}
+        </span>
+      </div>
 
-          <input
-            placeholder="Name"
-            value={newProduct.name}
-            onChange={(e) =>
-              setNewProduct({ ...newProduct, name: e.target.value })
-            }
-          />
+      {/* ADD PRODUCT (ADMIN ONLY) */}
+      {role === "admin" && (
+        <div style={styles.formCard}>
+          <h3 style={{ marginBottom: 10 }}>➕ Add Product</h3>
 
-          <input
-            type="number"
-            placeholder="Stock"
-            value={newProduct.stock}
-            onChange={(e) =>
-              setNewProduct({ ...newProduct, stock: e.target.value })
-            }
-          />
+          <div style={styles.formGrid}>
+            <input
+              style={styles.input}
+              placeholder="Product Name"
+              value={newProduct.name}
+              onChange={(e) =>
+                setNewProduct({ ...newProduct, name: e.target.value })
+              }
+            />
 
-          <input
-            type="number"
-            placeholder="Cost"
-            value={newProduct.cost}
-            onChange={(e) =>
-              setNewProduct({ ...newProduct, cost: e.target.value })
-            }
-          />
+            <input
+              style={styles.input}
+              type="number"
+              placeholder="Stock"
+              value={newProduct.stock}
+              onChange={(e) =>
+                setNewProduct({ ...newProduct, stock: e.target.value })
+              }
+            />
 
-          <input
-            type="number"
-            placeholder="Price"
-            value={newProduct.price}
-            onChange={(e) =>
-              setNewProduct({ ...newProduct, price: e.target.value })
-            }
-          />
+            <input
+              style={styles.input}
+              type="number"
+              placeholder="Cost"
+              value={newProduct.cost}
+              onChange={(e) =>
+                setNewProduct({ ...newProduct, cost: e.target.value })
+              }
+            />
 
-          <button onClick={addProduct}>➕ Add Product</button>
+            <input
+              style={styles.input}
+              type="number"
+              placeholder="Price"
+              value={newProduct.price}
+              onChange={(e) =>
+                setNewProduct({ ...newProduct, price: e.target.value })
+              }
+            />
+          </div>
+
+          <button style={styles.addBtn} onClick={addProduct}>
+            ➕ Add Product
+          </button>
         </div>
       )}
 
-      {/* PRODUCT LIST */}
-      <ul style={{ marginTop: 20 }}>
+      {/* PRODUCT GRID */}
+      <div style={styles.grid}>
         {products.map((p) => (
-          <li
-            key={p.id}
-            style={{
-              padding: 10,
-              borderBottom: "1px solid #eee",
-            }}
-          >
+          <div key={p.id} style={styles.card}>
             {editingId === p.id ? (
-              <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+              <>
                 <input
+                  style={styles.input}
                   value={editFields.name}
                   onChange={(e) =>
                     setEditFields({ ...editFields, name: e.target.value })
@@ -189,7 +172,7 @@ export default function Products() {
                 />
 
                 <input
-                  type="number"
+                  style={styles.input}
                   value={editFields.stock}
                   onChange={(e) =>
                     setEditFields({ ...editFields, stock: e.target.value })
@@ -197,7 +180,7 @@ export default function Products() {
                 />
 
                 <input
-                  type="number"
+                  style={styles.input}
                   value={editFields.cost}
                   onChange={(e) =>
                     setEditFields({ ...editFields, cost: e.target.value })
@@ -205,39 +188,179 @@ export default function Products() {
                 />
 
                 <input
-                  type="number"
+                  style={styles.input}
                   value={editFields.price}
                   onChange={(e) =>
                     setEditFields({ ...editFields, price: e.target.value })
                   }
                 />
 
-                <button onClick={() => saveEdit(p.id)}>💾 Save</button>
-                <button onClick={cancelEditing}>❌ Cancel</button>
-              </div>
-            ) : (
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <div>
-                  <b>{p.name}</b>
-                  <div style={{ fontSize: 12, color: "#666" }}>
-                    Stock: {p.stock} | Cost: {p.cost} | Price: {p.price}
-                  </div>
-                </div>
+                <div style={styles.btnRow}>
+                  <button style={styles.saveBtn} onClick={() => saveEdit(p.id)}>
+                    Save
+                  </button>
 
-                <div>
-                  <button onClick={() => startEditing(p)}>✏️ Edit</button>
+                  <button style={styles.cancelBtn} onClick={cancelEditing}>
+                    Cancel
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h3 style={{ marginBottom: 5 }}>{p.name}</h3>
+
+                <p style={styles.text}>
+                  Stock: <b>{p.stock}</b>
+                </p>
+                <p style={styles.text}>
+                  Cost: <b>{p.cost}</b>
+                </p>
+                <p style={styles.text}>
+                  Price: <b>{p.price}</b>
+                </p>
+
+                <div style={styles.btnRow}>
+                  <button
+                    style={styles.editBtn}
+                    onClick={() => startEditing(p)}
+                  >
+                    Edit
+                  </button>
 
                   {role === "admin" && (
-                    <button onClick={() => deleteProduct(p.id)}>
-                      🗑 Delete
+                    <button
+                      style={styles.deleteBtn}
+                      onClick={() => deleteProduct(p.id)}
+                    >
+                      Delete
                     </button>
                   )}
                 </div>
-              </div>
+              </>
             )}
-          </li>
+          </div>
         ))}
-      </ul>
+      </div>
     </div>
   );
 }
+
+/* ================= STYLES (NO BACKGROUND CHANGE) ================= */
+
+const styles = {
+  container: {
+    padding: 20,
+    fontFamily: "Arial",
+  },
+
+  header: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 15,
+  },
+
+  roleBadge: {
+    padding: "4px 10px",
+    borderRadius: 20,
+    color: "white",
+    fontSize: 12,
+    fontWeight: "bold",
+  },
+
+  formCard: {
+    padding: 15,
+    border: "1px solid #ddd",
+    borderRadius: 12,
+    marginBottom: 20,
+  },
+
+  formGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+    gap: 10,
+  },
+
+  grid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+    gap: 15,
+  },
+
+  card: {
+    padding: 15,
+    borderRadius: 12,
+    border: "1px solid #eee",
+    background: "rgba(255,255,255,0.4)",
+    boxShadow: "0 6px 15px rgba(0,0,0,0.05)",
+  },
+
+  input: {
+    padding: 10,
+    borderRadius: 8,
+    border: "1px solid #ddd",
+    outline: "none",
+    marginBottom: 8,
+  },
+
+  text: {
+    fontSize: 14,
+    color: "#444",
+  },
+
+  btnRow: {
+    display: "flex",
+    gap: 8,
+    marginTop: 10,
+  },
+
+  editBtn: {
+    flex: 1,
+    padding: 8,
+    border: "none",
+    borderRadius: 8,
+    background: "#2563eb",
+    color: "white",
+    cursor: "pointer",
+  },
+
+  deleteBtn: {
+    flex: 1,
+    padding: 8,
+    border: "none",
+    borderRadius: 8,
+    background: "#ef4444",
+    color: "white",
+    cursor: "pointer",
+  },
+
+  saveBtn: {
+    flex: 1,
+    padding: 8,
+    border: "none",
+    borderRadius: 8,
+    background: "#22c55e",
+    color: "white",
+    cursor: "pointer",
+  },
+
+  cancelBtn: {
+    flex: 1,
+    padding: 8,
+    border: "none",
+    borderRadius: 8,
+    background: "#6b7280",
+    color: "white",
+    cursor: "pointer",
+  },
+
+  addBtn: {
+    marginTop: 10,
+    padding: 10,
+    border: "none",
+    borderRadius: 10,
+    background: "linear-gradient(135deg, #2563eb, #7c3aed)",
+    color: "white",
+    cursor: "pointer",
+  },
+};

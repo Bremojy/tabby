@@ -1,13 +1,36 @@
-import React, { useState } from "react";
-import "./App.css";
+import React, { useState, useEffect } from "react";
 
 import Dashboard from "./components/Dashboard";
 import Products from "./components/Products";
 import Sales from "./components/Sales";
 import Summary from "./components/Summary";
+import Login from "./components/Login";
+import Signup from "./components/Signup";
 
 function App() {
   const [page, setPage] = useState("dashboard");
+  const [authPage, setAuthPage] = useState("login");
+  const [showProfile, setShowProfile] = useState(false);
+
+  const [loggedInUser, setLoggedInUser] = useState(() =>
+    localStorage.getItem("loggedInUser")
+  );
+
+  const [role, setRole] = useState(() =>
+    localStorage.getItem("auth_role") || "staff"
+  );
+
+  useEffect(() => {
+    const syncAuth = () => {
+      setLoggedInUser(localStorage.getItem("loggedInUser"));
+      setRole(localStorage.getItem("auth_role") || "staff");
+    };
+
+    window.addEventListener("storage", syncAuth);
+    syncAuth();
+
+    return () => window.removeEventListener("storage", syncAuth);
+  }, []);
 
   const navItems = [
     { id: "dashboard", label: "Dashboard" },
@@ -16,56 +39,80 @@ function App() {
     { id: "summary", label: "Monthly Summary" },
   ];
 
-  // 🎨 Button styling
-  const btnStyle = (active) => ({
-    padding: "10px 18px",
-    margin: "5px",
-    border: "none",
-    borderRadius: 8,
-    cursor: "pointer",
-    background: active ? "#2563eb" : "#e5e7eb",
-    color: active ? "white" : "#111",
-    fontWeight: "bold",
-    transition: "0.2s",
-  });
-
-  // 🔥 SAFE COMPONENT WRAPPER (prevents blank screen crash)
-  const SafeRender = ({ children }) => {
-    try {
-      return children;
-    } catch (err) {
-      console.error("Page crashed:", err);
-      return (
-        <div style={{ padding: 20, color: "red" }}>
-          ⚠️ Error loading this section. Check console.
-        </div>
-      );
+  const renderPage = () => {
+    switch (page) {
+      case "dashboard":
+        return <Dashboard />;
+      case "products":
+        return <Products role={role} />;
+      case "sales":
+        return <Sales role={role} />;
+      case "summary":
+        return <Summary role={role} />;
+      default:
+        return <Dashboard />;
     }
   };
 
-  // 🔥 PAGE RENDERER
-  const renderPage = () => {
-    const pages = {
-      dashboard: <Dashboard />,
-      products: <Products />,
-      sales: <Sales />,
-      summary: <Summary />,
-    };
+  const btnStyle = (active) => ({
+    padding: "10px 14px",
+    border: "none",
+    borderRadius: 20,
+    cursor: "pointer",
+    background: active ? "#2563eb" : "transparent",
+    color: active ? "white" : "#d1d5db",
+    fontWeight: "600",
+  });
 
+  // AUTH SCREEN
+  if (!loggedInUser) {
     return (
-      <SafeRender>
-        {pages[page] || <h3>Page not found</h3>}
-      </SafeRender>
+      <div style={{ fontFamily: "Arial" }}>
+        <header style={{ padding: 20, background: "#111827", color: "white" }}>
+          <h1>📊 TABBY SHOP POS</h1>
+        </header>
+
+        <div style={{ display: "flex", gap: 10, padding: 20 }}>
+          <button
+            style={btnStyle(authPage === "login")}
+            onClick={() => setAuthPage("login")}
+          >
+            Login
+          </button>
+
+          <button
+            style={btnStyle(authPage === "signup")}
+            onClick={() => setAuthPage("signup")}
+          >
+            Sign Up
+          </button>
+        </div>
+
+        <div style={{ padding: 20 }}>
+          {authPage === "signup" ? <Signup /> : <Login />}
+        </div>
+      </div>
     );
-  };
+  }
 
   return (
-    <div style={styles.container}>
-      {/* HEADER */}
-      <header style={styles.header}>
-        <h1 style={styles.title}>📊 TABBY SHOP POS SYSTEM</h1>
+    <div style={{ fontFamily: "Arial", minHeight: "100vh" }}>
+      {/* NAVBAR */}
+      <header
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          padding: 15,
+          background: "#111827",
+          color: "white",
+          position: "relative",
+        }}
+      >
+        <div style={{ fontWeight: "bold" }}>📊 Tabby POS</div>
 
-        <nav style={styles.nav}>
+        {/* NAV */}
+        <nav style={{ display: "flex", gap: 10 }}>
           {navItems.map((item) => (
             <button
               key={item.id}
@@ -76,41 +123,98 @@ function App() {
             </button>
           ))}
         </nav>
+
+        {/* PROFILE SECTION */}
+        <div style={{ position: "relative" }}>
+          <div
+            onClick={() => setShowProfile(!showProfile)}
+            style={styles.avatar}
+          >
+            {loggedInUser?.charAt(0).toUpperCase()}
+          </div>
+
+          {/* PROFILE CARD */}
+          {showProfile && (
+            <div style={styles.profileCard}>
+              <h4 style={{ marginBottom: 10 }}>👤 Profile</h4>
+
+              <p><b>User:</b> {loggedInUser}</p>
+
+              <p>
+                <b>Role:</b>{" "}
+                <span style={{ color: role === "admin" ? "#a855f7" : "#22c55e" }}>
+                  {role.toUpperCase()}
+                </span>
+              </p>
+
+              <p>
+                <b>Status:</b>{" "}
+                <span style={{ color: "#16a34a" }}>Online</span>
+              </p>
+
+              <button
+                style={styles.logout}
+                onClick={() => {
+                  localStorage.removeItem("loggedInUser");
+                  localStorage.removeItem("auth_role");
+
+                  setLoggedInUser(null);
+                  setRole("staff");
+                  setShowProfile(false);
+                }}
+              >
+                Logout
+              </button>
+            </div>
+          )}
+        </div>
       </header>
 
-      {/* MAIN CONTENT */}
-      <main style={styles.main}>{renderPage()}</main>
+      {/* MAIN */}
+      <main style={{ padding: 20 }}>{renderPage()}</main>
     </div>
   );
 }
 
 export default App;
 
-// 🎨 STYLES
+/* STYLES */
 const styles = {
-  container: {
-    fontFamily: "Arial, sans-serif",
-    padding: 20,
-    maxWidth: 1100,
-    margin: "0 auto",
-  },
-  header: {
-    textAlign: "center",
-    marginBottom: 20,
-  },
-  title: {
-    fontSize: 26,
-    marginBottom: 10,
-  },
-  nav: {
+  avatar: {
+    width: 38,
+    height: 38,
+    borderRadius: "50%",
+    background: "linear-gradient(135deg, #2563eb, #7c3aed)",
     display: "flex",
+    alignItems: "center",
     justifyContent: "center",
-    flexWrap: "wrap",
+    fontWeight: "bold",
+    cursor: "pointer",
+    boxShadow: "0 4px 10px rgba(0,0,0,0.3)",
   },
-  main: {
-    background: "#f9fafb",
-    padding: 20,
+
+  profileCard: {
+    position: "absolute",
+    right: 0,
+    top: 50,
+    width: 230,
+    background: "rgba(17,24,39,0.95)",
+    color: "white",
+    padding: 15,
     borderRadius: 12,
-    minHeight: "70vh",
+    boxShadow: "0 10px 25px rgba(0,0,0,0.4)",
+    backdropFilter: "blur(10px)",
+    zIndex: 999,
+  },
+
+  logout: {
+    marginTop: 10,
+    width: "100%",
+    padding: "8px 12px",
+    border: "none",
+    borderRadius: 8,
+    background: "red",
+    color: "white",
+    cursor: "pointer",
   },
 };
