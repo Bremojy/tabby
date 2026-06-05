@@ -18,10 +18,36 @@ export default function Products() {
   const [editFields, setEditFields] = useState(emptyProduct);
   const [newProduct, setNewProduct] = useState(emptyProduct);
 
-  useEffect(() => {
+ useEffect(() => {
+  const loadProducts = () => {
     const data = getData("products");
     setProducts(Array.isArray(data) ? data : []);
-  }, []);
+  };
+
+  loadProducts();
+
+  const interval = setInterval(() => {
+  const latest = getData("products") || [];
+
+  setProducts((current) => {
+    if (JSON.stringify(current) === JSON.stringify(latest)) {
+      return current;
+    }
+    return latest;
+  });
+}, 1000);
+
+  const handleStorageChange = () => {
+    loadProducts();
+  };
+
+  window.addEventListener("storage", handleStorageChange);
+
+  return () => {
+    clearInterval(interval);
+    window.removeEventListener("storage", handleStorageChange);
+  };
+}, []);
 
   /* ================= CRUD ================= */
 
@@ -42,51 +68,62 @@ export default function Products() {
     setEditFields(emptyProduct);
   };
 
-  const saveEdit = (id) => {
-    const updated = products.map((p) =>
-      p.id === id
-        ? {
-            ...p,
-            name: editFields.name.trim(),
-            stock: Number(editFields.stock || 0),
-            cost: Number(editFields.cost || 0),
-            price: Number(editFields.price || 0),
-          }
-        : p
-    );
+const saveEdit = (id) => {
+  const updated = products.map((p) =>
+    p.id === id
+      ? {
+          ...p,
+          name: editFields.name.trim(),
+          stock: Number(editFields.stock || 0),
+          cost: Number(editFields.cost || 0),
+          price: Number(editFields.price || 0),
+        }
+      : p
+  );
 
-    setProducts(updated);
-    saveData("products", updated);
-    cancelEditing();
+  saveData("products", updated);
+  setProducts(updated);
+
+  window.dispatchEvent(new Event("storage"));
+
+  cancelEditing();
+};
+const deleteProduct = (id) => {
+  if (role !== "admin")
+    return alert("❌ Staff cannot delete products");
+
+  const updated = products.filter((p) => p.id !== id);
+
+  saveData("products", updated);
+  setProducts(updated);
+
+  window.dispatchEvent(new Event("storage"));
+};
+
+const addProduct = () => {
+  if (role !== "admin")
+    return alert("❌ Staff cannot add products");
+
+  if (!newProduct.name.trim())
+    return alert("Product name required");
+
+  const product = {
+    id: Date.now(),
+    name: newProduct.name.trim(),
+    stock: Number(newProduct.stock || 0),
+    cost: Number(newProduct.cost || 0),
+    price: Number(newProduct.price || 0),
   };
 
-  const deleteProduct = (id) => {
-    if (role !== "admin") return alert("❌ Staff cannot delete products");
+  const updated = [...products, product];
 
-    const updated = products.filter((p) => p.id !== id);
-    setProducts(updated);
-    saveData("products", updated);
-  };
+  saveData("products", updated);
+  setProducts(updated);
 
-  const addProduct = () => {
-    if (role !== "admin") return alert("❌ Staff cannot add products");
+  window.dispatchEvent(new Event("storage"));
 
-    if (!newProduct.name.trim())
-      return alert("Product name required");
-
-    const product = {
-      id: Date.now(),
-      name: newProduct.name.trim(),
-      stock: Number(newProduct.stock || 0),
-      cost: Number(newProduct.cost || 0),
-      price: Number(newProduct.price || 0),
-    };
-
-    const updated = [...products, product];
-    setProducts(updated);
-    saveData("products", updated);
-    setNewProduct(emptyProduct);
-  };
+  setNewProduct(emptyProduct);
+};
 
   /* ================= UI ================= */
 
@@ -220,23 +257,23 @@ export default function Products() {
                   Price: <b>{p.price}</b>
                 </p>
 
-                <div style={styles.btnRow}>
-                  <button
-                    style={styles.editBtn}
-                    onClick={() => startEditing(p)}
-                  >
-                    Edit
-                  </button>
+{role === "admin" && (
+  <div style={styles.btnRow}>
+    <button
+      style={styles.editBtn}
+      onClick={() => startEditing(p)}
+    >
+      Edit
+    </button>
 
-                  {role === "admin" && (
-                    <button
-                      style={styles.deleteBtn}
-                      onClick={() => deleteProduct(p.id)}
-                    >
-                      Delete
-                    </button>
-                  )}
-                </div>
+    <button
+      style={styles.deleteBtn}
+      onClick={() => deleteProduct(p.id)}
+    >
+      Delete
+    </button>
+  </div>
+)}
               </>
             )}
           </div>

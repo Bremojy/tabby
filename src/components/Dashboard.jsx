@@ -10,39 +10,45 @@ export default function Dashboard() {
   const role = localStorage.getItem("auth_role") || "staff";
 
   useEffect(() => {
-    const data = getData("sales");
-    setSales(Array.isArray(data) ? data : []);
-  }, []);
+  const summaries = getData("dailySummary") || [];
+  setSales(Array.isArray(summaries) ? summaries : []);
+}, []);
 
   const toTime = (date) => new Date(date).getTime();
 
-  const filteredSales = sales.filter((s) => {
-    if (!s?.date) return false;
+const filteredSales =
+  fromDate || toDate
+    ? sales.filter((s) => {
+        if (!s?.date) return false;
 
-    const saleTime = toTime(s.date);
-    const from = fromDate ? toTime(fromDate) : null;
-    const to = toDate ? toTime(toDate) : null;
+        const saleTime = toTime(s.date);
+        const from = fromDate ? toTime(fromDate) : null;
+        const to = toDate ? toTime(toDate) : null;
 
-    if (from && saleTime < from) return false;
-    if (to && saleTime > to) return false;
+        if (from && saleTime < from) return false;
+        if (to && saleTime > to) return false;
 
-    return true;
-  });
+        return true;
+      })
+    : sales.length > 0
+    ? [sales[sales.length - 1]]
+    : [];
 
-  const totalSales = filteredSales.reduce(
-    (a, b) => a + (Number(b?.total) || 0),
-    0
-  );
+const totalSales = filteredSales.reduce(
+  (a, b) => a + (Number(b?.totalSales) || 0),
+  0
+);
 
-  const totalProfit = filteredSales.reduce(
-    (a, b) => a + (Number(b?.profit) || 0),
-    0
-  );
+const totalProfit = filteredSales.reduce(
+  (a, b) => a + (Number(b?.totalProfit) || 0),
+  0
+);
 
-  const itemsSold = filteredSales.reduce(
-    (a, b) => a + (Number(b?.qty) || 0),
-    0
-  );
+const itemsSold = filteredSales.reduce(
+  (a, b) => a + (Number(b?.itemsSold) || 0),
+  0
+);
+
 
   const formatKsh = (v) => `Ksh ${Number(v || 0).toLocaleString()}`;
 
@@ -113,34 +119,62 @@ export default function Dashboard() {
         )}
       </div>
 
+      <div style={styles.grid}>
+  <div style={styles.card}>
+    <p>Cumulative Sales</p>
+    <h3>{formatKsh(totalSales)}</h3>
+  </div>
+
+  <div style={styles.card}>
+    <p>Cumulative Items</p>
+    <h3>{itemsSold}</h3>
+  </div>
+
+  {role === "admin" && (
+    <div style={styles.card}>
+      <p>Cumulative Profit</p>
+      <h3 style={{ color: "#22c55e" }}>
+        {formatKsh(totalProfit)}
+      </h3>
+    </div>
+  )}
+</div>
+
       {/* TRANSACTIONS */}
       <div style={styles.listSection}>
         <h3>🧾 Transactions</h3>
 
-        {filteredSales.length === 0 ? (
-          <p style={{ color: "#888" }}>No sales found</p>
-        ) : (
-          filteredSales.map((s) => (
-            <div key={s.id} style={styles.row}>
-              <div>
-                <b>{s?.name}</b>
-                <div style={styles.subText}>
-                  Qty: {s?.qty} | {s?.date}
-                </div>
-              </div>
+{filteredSales.length === 0 ? (
+  <p style={{ color: "#888" }}>No transactions found</p>
+) : (
+  filteredSales.map((s) => (
+    <div key={s.date} style={styles.row}>
+      <div>
+        <b>Shift Closed: {s.date}</b>
 
-              <div style={{ textAlign: "right" }}>
-                <b>{formatKsh(s?.total)}</b>
+        <div style={styles.subText}>
+          Items Sold: {s.itemsSold}
+        </div>
+      </div>
 
-                {role === "admin" && (
-                  <div style={{ ...styles.subText, color: "#22c55e" }}>
-                    Profit {formatKsh(s?.profit)}
-                  </div>
-                )}
-              </div>
-            </div>
-          ))
+      <div style={{ textAlign: "right" }}>
+        <b>{formatKsh(s.totalSales)}</b>
+
+        {role === "admin" && (
+          <div
+            style={{
+              ...styles.subText,
+              color: "#22c55e",
+            }}
+          >
+            Profit {formatKsh(s.totalProfit)}
+          </div>
         )}
+      </div>
+    </div>
+  ))
+)}
+        
       </div>
     </div>
   );
