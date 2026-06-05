@@ -9,17 +9,16 @@ export default function Sales() {
   // 🔐 FIXED ROLE DETECTION (STANDARDIZED)
   const role = localStorage.getItem("auth_role") || "staff";
 
-const [selected, setSelected] = useState("");
-const [qty, setQty] = useState("");
-const [editId, setEditId] = useState(null);
+  const [selected, setSelected] = useState("");
+  const [qty, setQty] = useState("");
+  const [editId, setEditId] = useState(null);
 
-const today = new Date().toISOString().split("T")[0];
-
-const reopenKey = `reopened_${today}`;
-
+  const reopenKey = `reopened_${today}`;
 const [reopened, setReopened] = useState(
   localStorage.getItem(reopenKey) === "true"
 );
+
+  const today = new Date().toISOString().split("T")[0];
 
   useEffect(() => {
     setProducts(getData("products") || []);
@@ -103,42 +102,62 @@ const [reopened, setReopened] = useState(
   const closeShift = () => {
   const todaySales = sales.filter((s) => s.date === today);
 
-  const summary = {
-    date: today,
-    totalSales: todaySales.reduce((s, v) => s + v.total, 0),
-    totalProfit: todaySales.reduce((s, v) => s + v.profit, 0),
-    itemsSold: todaySales.reduce((s, v) => s + v.qty, 0),
-  };
+const summary = {
+  date: today,
+  totalSales: todaySales.reduce((s, v) => s + v.total, 0),
+  totalProfit: todaySales.reduce((s, v) => s + v.profit, 0),
+  itemsSold: todaySales.reduce((s, v) => s + v.qty, 0),
+
+  salesData: todaySales,
+};
 
   const updated = [...summaries, summary];
 
   setSummaries(updated);
   saveData("dailySummary", updated);
 
-const remaining = sales.filter((s) => s.date !== today);
+  localStorage.removeItem(reopenKey);
+
+  setReopened(false);
+
+  alert("✅ Shift Closed");
+};
+const remaining = sales.filter(
+  (s) => s.date !== today
+);
 
 setSales(remaining);
 saveData("sales", remaining);
-
-localStorage.removeItem(reopenKey);
-
-setReopened(false);
-
-alert("✅ Shift Closed");
-};
 
 const reopenShift = () => {
   if (role !== "admin") {
     return alert("❌ Only admin can reopen shifts");
   }
 
-  const updated = summaries.filter((s) => s.date !== today);
+  const closedShift = summaries.find(
+    (s) => s.date === today
+  );
 
-  setSummaries(updated);
-  saveData("dailySummary", updated);
+  if (!closedShift) {
+    return alert("No closed shift found");
+  }
+
+  const updatedSummaries = summaries.filter(
+    (s) => s.date !== today
+  );
+
+  setSummaries(updatedSummaries);
+  saveData("dailySummary", updatedSummaries);
+
+  const restoredSales = [
+    ...sales,
+    ...(closedShift.salesData || []),
+  ];
+
+  setSales(restoredSales);
+  saveData("sales", restoredSales);
 
   localStorage.setItem(reopenKey, "true");
-
   setReopened(true);
 
   alert("🔓 Shift Reopened");
