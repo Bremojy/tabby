@@ -12,13 +12,14 @@ export default function Sales() {
   const [selected, setSelected] = useState("");
   const [qty, setQty] = useState("");
   const [editId, setEditId] = useState(null);
+  const today = new Date().toISOString().split("T")[0];
 
   const reopenKey = `reopened_${today}`;
 const [reopened, setReopened] = useState(
   localStorage.getItem(reopenKey) === "true"
 );
 
-  const today = new Date().toISOString().split("T")[0];
+  
 
   useEffect(() => {
     setProducts(getData("products") || []);
@@ -115,19 +116,21 @@ const summary = {
 
   setSummaries(updated);
   saveData("dailySummary", updated);
+  const remaining = sales.filter(
+  (s) => s.date !== today
+);
+
+setSales(remaining);
+saveData("sales", remaining);
 
   localStorage.removeItem(reopenKey);
 
   setReopened(false);
 
   alert("✅ Shift Closed");
+  
 };
-const remaining = sales.filter(
-  (s) => s.date !== today
-);
 
-setSales(remaining);
-saveData("sales", remaining);
 
 const reopenShift = () => {
   if (role !== "admin") {
