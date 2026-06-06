@@ -124,48 +124,31 @@ const addSale = () => {
 
   /* ================= SHIFT ACTIONS ================= */
 
-  const closeShift = () => {
+const closeShift = () => {
   const todaySales = sales.filter((s) => s.date === today);
 
-const summary = {
-  date: today,
-  totalSales: todaySales.reduce((s, v) => s + v.total, 0),
-  totalProfit: todaySales.reduce((s, v) => s + v.profit, 0),
-  itemsSold: todaySales.reduce((s, v) => s + v.qty, 0),
+  const summary = {
+    date: today,
+    totalSales: todaySales.reduce((s, v) => s + v.total, 0),
+    totalProfit: todaySales.reduce((s, v) => s + v.profit, 0),
+    itemsSold: todaySales.reduce((s, v) => s + v.qty, 0),
 
-  salesData: todaySales.map((sale) => {
-    const product = products.find(
-      (p) => p.id === sale.productId
-    );
-
-    return {
-      name: sale.name,
-      quantity: sale.qty,
-      price: product?.price || 0,
-      cost: product?.cost || 0,
-      total: sale.total,
-      profit: sale.profit,
-    };
-  }),
-};
+    // Save full sales records
+    salesData: todaySales,
+  };
 
   const updated = [...summaries, summary];
 
   setSummaries(updated);
   saveData("dailySummary", updated);
-  const remaining = sales.filter(
-  (s) => s.date !== today
-);
 
-setSales(remaining);
-saveData("sales", remaining);
+  // DO NOT DELETE SALES
+  saveData("sales", sales);
 
   localStorage.removeItem(reopenKey);
-
   setReopened(false);
 
   alert("✅ Shift Closed");
-  
 };
 
 
@@ -188,14 +171,6 @@ const reopenShift = () => {
 
   setSummaries(updatedSummaries);
   saveData("dailySummary", updatedSummaries);
-
-  const restoredSales = [
-    ...sales,
-    ...(closedShift.salesData || []),
-  ];
-
-  setSales(restoredSales);
-  saveData("sales", restoredSales);
 
   localStorage.setItem(reopenKey, "true");
   setReopened(true);
