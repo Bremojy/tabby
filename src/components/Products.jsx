@@ -153,13 +153,7 @@ const addProduct = () => {
   setNewProduct(emptyProduct);
 };
 
-const data = getData("products") || [];
 
-setProducts(
-  data.sort((a, b) =>
-    a.name.localeCompare(b.name)
-  )
-);
 
   /* ================= UI ================= */
 
