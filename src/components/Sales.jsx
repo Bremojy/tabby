@@ -127,42 +127,59 @@ const addSale = () => {
 const closeShift = () => {
   const todaySales = sales.filter((s) => s.date === today);
 
+  if (todaySales.length === 0) {
+    return alert("No sales to close");
+  }
+
+  // Prevent closing twice
+  const existingSummary = summaries.find(
+    (s) => s.date === today
+  );
+
+  if (existingSummary) {
+    return alert("⚠️ Shift already closed");
+  }
+
   const summary = {
     date: today,
-    totalSales: todaySales.reduce((s, v) => s + v.total, 0),
-    totalProfit: todaySales.reduce((s, v) => s + v.profit, 0),
-    itemsSold: todaySales.reduce((s, v) => s + v.qty, 0),
+    totalSales: todaySales.reduce(
+      (sum, sale) => sum + sale.total,
+      0
+    ),
+    totalProfit: todaySales.reduce(
+      (sum, sale) => sum + sale.profit,
+      0
+    ),
+    itemsSold: todaySales.reduce(
+      (sum, sale) => sum + sale.qty,
+      0
+    ),
 
-    // Save full sales records
-    salesData: todaySales,
+    // Keep original sales records
+    salesData: [...todaySales],
   };
 
-  const updated = [...summaries, summary];
+  const updatedSummaries = [
+    ...summaries,
+    summary,
+  ];
 
-  setSummaries(updated);
-  saveData("dailySummary", updated);
+  setSummaries(updatedSummaries);
+  saveData("dailySummary", updatedSummaries);
 
-  // DO NOT DELETE SALES
+  // IMPORTANT: keep sales for reopening
   saveData("sales", sales);
 
   localStorage.removeItem(reopenKey);
   setReopened(false);
 
-  alert("✅ Shift Closed");
+  alert("✅ Shift Closed Successfully");
 };
 
 
 const reopenShift = () => {
   if (role !== "admin") {
     return alert("❌ Only admin can reopen shifts");
-  }
-
-  const closedShift = summaries.find(
-    (s) => s.date === today
-  );
-
-  if (!closedShift) {
-    return alert("No closed shift found");
   }
 
   const updatedSummaries = summaries.filter(
