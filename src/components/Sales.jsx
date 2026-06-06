@@ -20,12 +20,11 @@ const [reopened, setReopened] = useState(
 );
 
   
-
-  useEffect(() => {
-    setProducts(getData("products") || []);
-    setSales(getData("sales") || []);
-    setSummaries(getData("dailySummary") || []);
-  }, []);
+useEffect(() => {
+  setProducts(getData("products") || []);
+  setSales(Array.isArray(getData("sales")) ? getData("sales") : []);
+  setSummaries(getData("dailySummary") || []);
+}, []);
 
   useEffect(() => {
   const checkReopen = () => {
@@ -44,69 +43,63 @@ const [reopened, setReopened] = useState(
 
   /* ================= ADD / UPDATE SALE ================= */
 
-  const addSale = () => {
-    if (alreadyClosed) return alert("⚠️ Shift is closed");
+const addSale = () => {
+  if (alreadyClosed) return alert("⚠️ Shift is closed");
 
-    const product = products.find((p) => p.id === Number(selected));
-    const quantity = Number(qty);
+  const product = products.find((p) => p.id === Number(selected));
+  const quantity = Number(qty);
 
-    if (!product) return alert("Select product");
-    if (!quantity) return alert("Enter quantity");
-    if (product.stock < quantity)
-      return alert("Not enough stock");
+  if (!product) return alert("Select product");
+  if (!quantity) return alert("Enter quantity");
+  if (product.stock < quantity) return alert("Not enough stock");
 
-    const total = product.price * quantity;
-    const profit = (product.price - product.cost) * quantity;
+  const total = product.price * quantity;
+  const profit = (product.price - product.cost) * quantity;
 
-    let updatedSales;
+  let updatedSales = [...sales]; // ✅ ALWAYS DEFINED
 
-if (editId) {
-  const oldSale = sales.find((s) => s.id === editId);
+  if (editId) {
+    updatedSales = sales.map((s) =>
+      s.id === editId
+        ? { ...s, qty: quantity, total, profit }
+        : s
+    );
+  } else {
+    updatedSales = [
+      ...sales,
+      {
+        id: Date.now(),
+        productId: product.id,
+        name: product.name,
+        qty: quantity,
+        total,
+        profit,
+        date: today,
+      },
+    ];
+  }
 
-  const updatedProducts = products.map((p) => {
-    if (p.id === product.id) {
-      return {
-        ...p,
-        stock:
-          p.stock +
-          oldSale.qty -
-          quantity,
-      };
-    }
-    return p;
-  });
+  const updatedProducts = products.map((p) =>
+    p.id === product.id
+      ? {
+          ...p,
+          stock: editId
+            ? p.stock + sales.find((s) => s.id === editId)?.qty - quantity
+            : p.stock - quantity,
+        }
+      : p
+  );
 
+  setSales(updatedSales);
   setProducts(updatedProducts);
+
+  saveData("sales", updatedSales);
   saveData("products", updatedProducts);
 
-  updatedSales = sales.map((s) =>
-    s.id === editId
-      ? {
-          ...s,
-          qty: quantity,
-          total,
-          profit,
-        }
-      : s
-  );
-}
-
-    const updatedProducts = products.map((p) =>
-      p.id === product.id
-        ? { ...p, stock: p.stock - quantity }
-        : p
-    );
-
-    setSales(updatedSales);
-    setProducts(updatedProducts);
-
-    saveData("sales", updatedSales);
-    saveData("products", updatedProducts);
-
-    setSelected("");
-    setQty("");
-    setEditId(null);
-  };
+  setSelected("");
+  setQty("");
+  setEditId(null);
+};
 
   /* ================= SHIFT ACTIONS ================= */
 
