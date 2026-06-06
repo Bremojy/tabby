@@ -5,6 +5,7 @@ export default function Dashboard() {
   const [sales, setSales] = useState([]);
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
+  const [expandedDate, setExpandedDate] = useState(null);
 
   const username = localStorage.getItem("loggedInUser") || "User";
   const role = localStorage.getItem("auth_role") || "staff";
@@ -119,26 +120,7 @@ const itemsSold = filteredSales.reduce(
         )}
       </div>
 
-      <div style={styles.grid}>
-  <div style={styles.card}>
-    <p>Cumulative Sales</p>
-    <h3>{formatKsh(totalSales)}</h3>
-  </div>
-
-  <div style={styles.card}>
-    <p>Cumulative Items</p>
-    <h3>{itemsSold}</h3>
-  </div>
-
-  {role === "admin" && (
-    <div style={styles.card}>
-      <p>Cumulative Profit</p>
-      <h3 style={{ color: "#22c55e" }}>
-        {formatKsh(totalProfit)}
-      </h3>
-    </div>
-  )}
-</div>
+      
 
       {/* TRANSACTIONS */}
       <div style={styles.listSection}>
@@ -148,37 +130,93 @@ const itemsSold = filteredSales.reduce(
   <p style={{ color: "#888" }}>No transactions found</p>
 ) : (
   filteredSales.map((s) => (
-    <div key={s.date} style={styles.row}>
-      <div>
-        <b>Shift Closed: {s.date}</b>
+    <div key={s.date} style={styles.transactionCard}>
+      <div style={styles.row}>
+        <div>
+          <b>Shift Closed: {s.date}</b>
 
-        <div style={styles.subText}>
-          Items Sold: {s.itemsSold}
+          <div style={styles.subText}>
+            Items Sold: {s.itemsSold}
+          </div>
+        </div>
+
+        <div style={{ textAlign: "right" }}>
+          <b>{formatKsh(s.totalSales)}</b>
+
+          {role === "admin" && (
+            <div
+              style={{
+                ...styles.subText,
+                color: "#22c55e",
+              }}
+            >
+              Profit {formatKsh(s.totalProfit)}
+            </div>
+          )}
+
+          <button
+            style={styles.detailBtn}
+            onClick={() =>
+              setExpandedDate(
+                expandedDate === s.date ? null : s.date
+              )
+            }
+          >
+            {expandedDate === s.date
+              ? "Hide Details"
+              : "View Details"}
+          </button>
         </div>
       </div>
 
-      <div style={{ textAlign: "right" }}>
-        <b>{formatKsh(s.totalSales)}</b>
+      {expandedDate === s.date && (
+        <div style={styles.detailsBox}>
+          <h4>Items Sold</h4>
 
-        {role === "admin" && (
-          <div
-            style={{
-              ...styles.subText,
-              color: "#22c55e",
-            }}
-          >
-            Profit {formatKsh(s.totalProfit)}
-          </div>
-        )}
+          {s.salesData && s.salesData.length > 0 ? (
+s.salesData.map((item, index) => (
+  <div key={index} style={styles.itemRow}>
+    <div>
+      <b>{item.name}</b>
+
+      <div style={styles.subText}>
+        Qty: {item.quantity}
       </div>
+    </div>
+
+    <div style={{ textAlign: "right" }}>
+      <div>
+        Sales: {formatKsh(item.total)}
+      </div>
+
+      {role === "admin" && (
+        <div
+          style={{
+            color: "#22c55e",
+            fontSize: 12,
+          }}
+        >
+          Profit: {formatKsh(item.profit)}
+        </div>
+      )}
+    </div>
+  </div>
+))
+          ) : (
+            <p>No item details available</p>
+          )}
+        </div>
+      )}
     </div>
   ))
 )}
-        
       </div>
     </div>
   );
 }
+
+  
+
 
 /* ================= MODERN UI STYLES ================= */
 const styles = {
@@ -270,4 +308,35 @@ const styles = {
     fontSize: 12,
     color: "#666",
   },
+
+  transactionCard: {
+  border: "1px solid #eee",
+  borderRadius: 12,
+  marginBottom: 12,
+  overflow: "hidden",
+  background: "#fff",
+},
+
+detailBtn: {
+  marginTop: 8,
+  padding: "6px 12px",
+  border: "none",
+  borderRadius: 8,
+  background: "#2563eb",
+  color: "white",
+  cursor: "pointer",
+},
+
+detailsBox: {
+  padding: 12,
+  borderTop: "1px solid #eee",
+  background: "#fafafa",
+},
+
+itemRow: {
+  display: "flex",
+  justifyContent: "space-between",
+  padding: "8px 0",
+  borderBottom: "1px solid #eee",
+},
 };

@@ -32,12 +32,17 @@ function App() {
     return () => window.removeEventListener("storage", syncAuth);
   }, []);
 
-  const navItems = [
-    { id: "dashboard", label: "Dashboard" },
-    { id: "products", label: "Products" },
-    { id: "sales", label: "Sales" },
-    { id: "summary", label: "Monthly Summary" },
-  ];
+ const navItems = [
+  { id: "dashboard", label: "Dashboard" },
+  { id: "products", label: "Products" },
+  { id: "sales", label: "Sales" },
+  { id: "summary", label: "Monthly Summary" },
+
+
+  ...(role === "admin"
+    ? [{ id: "signup", label: "Create Staff" }]
+    : []),
+];
 
   const renderPage = () => {
     switch (page) {
@@ -47,8 +52,11 @@ function App() {
         return <Products role={role} />;
       case "sales":
         return <Sales role={role} />;
-      case "summary":
-        return <Summary role={role} />;
+     case "summary":
+  return <Summary role={role} />;
+
+case "signup":
+  return role === "admin" ? <Signup /> : null;
       default:
         return <Dashboard />;
     }
@@ -65,35 +73,19 @@ function App() {
   });
 
   // AUTH SCREEN
-  if (!loggedInUser) {
-    return (
-      <div style={{ fontFamily: "Arial" }}>
-        <header style={{ padding: 20, background: "#111827", color: "white" }}>
-          <h1>📊 TABBY SHOP POS</h1>
-        </header>
+if (!loggedInUser) {
+  return (
+    <div style={{ fontFamily: "Arial" }}>
+      <header style={{ padding: 20, background: "#111827", color: "white" }}>
+        <h1>📊 TABBY SHOP POS</h1>
+      </header>
 
-        <div style={{ display: "flex", gap: 10, padding: 20 }}>
-          <button
-            style={btnStyle(authPage === "login")}
-            onClick={() => setAuthPage("login")}
-          >
-            Login
-          </button>
-
-          <button
-            style={btnStyle(authPage === "signup")}
-            onClick={() => setAuthPage("signup")}
-          >
-            Sign Up
-          </button>
-        </div>
-
-        <div style={{ padding: 20 }}>
-          {authPage === "signup" ? <Signup /> : <Login />}
-        </div>
+      <div style={{ padding: 20 }}>
+        <Login />
       </div>
-    );
-  }
+    </div>
+  );
+}
 
   return (
     <div style={{ fontFamily: "Arial", minHeight: "100vh" }}>

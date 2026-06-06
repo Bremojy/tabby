@@ -1,6 +1,19 @@
 import React, { useState } from "react";
 
 export default function Signup() {
+
+  const role = localStorage.getItem("auth_role");
+
+if (role !== "admin") {
+  return (
+    <div style={styles.wrapper}>
+      <div style={styles.card}>
+        <h2>⛔ Access Denied</h2>
+        <p>Only administrators can create accounts.</p>
+      </div>
+    </div>
+  );
+}
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -9,6 +22,8 @@ export default function Signup() {
 
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
+
+
 
   // 🔐 STRONG PASSWORD RULE (UPDATED)
   const validatePassword = (pass) => {
@@ -30,6 +45,20 @@ export default function Signup() {
   const handleSignup = () => {
     setLoading(true);
     setMessage(null);
+
+    const handleSignup = () => {
+  const role = localStorage.getItem("auth_role");
+
+  if (role !== "admin") {
+    alert("Only administrators can create accounts");
+    return;
+  }
+
+  setLoading(true);
+  setMessage(null);
+
+  // rest of your code...
+};
 
     setTimeout(() => {
       if (!username.trim()) {

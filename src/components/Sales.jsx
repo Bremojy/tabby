@@ -60,26 +60,36 @@ const [reopened, setReopened] = useState(
 
     let updatedSales;
 
-    if (editId) {
-      updatedSales = sales.map((s) =>
-        s.id === editId
-          ? { ...s, qty: quantity, total, profit }
-          : s
-      );
-    } else {
-      updatedSales = [
-        ...sales,
-        {
-          id: Date.now(),
-          productId: product.id,
-          name: product.name,
+if (editId) {
+  const oldSale = sales.find((s) => s.id === editId);
+
+  const updatedProducts = products.map((p) => {
+    if (p.id === product.id) {
+      return {
+        ...p,
+        stock:
+          p.stock +
+          oldSale.qty -
+          quantity,
+      };
+    }
+    return p;
+  });
+
+  setProducts(updatedProducts);
+  saveData("products", updatedProducts);
+
+  updatedSales = sales.map((s) =>
+    s.id === editId
+      ? {
+          ...s,
           qty: quantity,
           total,
           profit,
-          date: today,
-        },
-      ];
-    }
+        }
+      : s
+  );
+}
 
     const updatedProducts = products.map((p) =>
       p.id === product.id
@@ -109,7 +119,20 @@ const summary = {
   totalProfit: todaySales.reduce((s, v) => s + v.profit, 0),
   itemsSold: todaySales.reduce((s, v) => s + v.qty, 0),
 
-  salesData: todaySales,
+  salesData: todaySales.map((sale) => {
+    const product = products.find(
+      (p) => p.id === sale.productId
+    );
+
+    return {
+      name: sale.name,
+      quantity: sale.qty,
+      price: product?.price || 0,
+      cost: product?.cost || 0,
+      total: sale.total,
+      profit: sale.profit,
+    };
+  }),
 };
 
   const updated = [...summaries, summary];

@@ -107,6 +107,23 @@ const addProduct = () => {
   if (!newProduct.name.trim())
     return alert("Product name required");
 
+  if (
+  Number(newProduct.price) <
+  Number(newProduct.cost)
+) {
+  return alert(
+    "Selling price cannot be lower than cost"
+  );
+}
+
+  if (
+  Number(newProduct.stock) < 0 ||
+  Number(newProduct.cost) < 0 ||
+  Number(newProduct.price) < 0
+) {
+  return alert("Values cannot be negative");
+}
+
   const product = {
     id: Date.now(),
     name: newProduct.name.trim(),
@@ -114,6 +131,7 @@ const addProduct = () => {
     cost: Number(newProduct.cost || 0),
     price: Number(newProduct.price || 0),
   };
+
 
   const updated = [...products, product];
 
@@ -124,6 +142,14 @@ const addProduct = () => {
 
   setNewProduct(emptyProduct);
 };
+
+const data = getData("products") || [];
+
+setProducts(
+  data.sort((a, b) =>
+    a.name.localeCompare(b.name)
+  )
+);
 
   /* ================= UI ================= */
 
@@ -247,12 +273,21 @@ const addProduct = () => {
               <>
                 <h3 style={{ marginBottom: 5 }}>{p.name}</h3>
 
-                <p style={styles.text}>
-                  Stock: <b>{p.stock}</b>
-                </p>
-                <p style={styles.text}>
-                  Cost: <b>{p.cost}</b>
-                </p>
+              <p
+  style={{
+    ...styles.text,
+    color: p.stock <= 5 ? "#ef4444" : "#444",
+    fontWeight: p.stock <= 5 ? "bold" : "normal",
+  }}
+>
+  Stock: <b>{p.stock}</b>
+  {p.stock <= 5 && " ⚠️ Low Stock"}
+</p>
+                {role === "admin" && (
+  <p style={styles.text}>
+    Cost: <b>{p.cost}</b>
+  </p>
+)}
                 <p style={styles.text}>
                   Price: <b>{p.price}</b>
                 </p>

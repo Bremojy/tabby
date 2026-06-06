@@ -22,15 +22,18 @@ export default function Login() {
 
         setMessage({ type: "success", text: "Welcome Admin Mode 🔐" });
         setTimeout(() => window.location.reload(), 800);
+        setLoading(false);
         return;
       }
 
       // NORMAL USERS
       const users = JSON.parse(localStorage.getItem("users")) || [];
 
-      const user = users.find(
-        (u) => u.username === username && u.password === password
-      );
+  const user = users.find(
+  (u) =>
+    u.username.toLowerCase() === username.toLowerCase() &&
+    u.password === password
+);
 
       if (!user) {
         setMessage({ type: "error", text: "Invalid username or password" });
@@ -42,6 +45,7 @@ export default function Login() {
       localStorage.setItem("auth_role", user.role || "staff");
 
       setMessage({ type: "success", text: "Login successful!" });
+      setLoading(false);
 
       setTimeout(() => window.location.reload(), 800);
     }, 700);
@@ -54,22 +58,24 @@ export default function Login() {
         <p style={styles.subtitle}>Login to your Tabby POS account</p>
 
         {/* USERNAME */}
-        <input
-          style={styles.input}
-          placeholder="Username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-        />
+      <input
+  style={styles.input}
+  placeholder="Username"
+  value={username}
+  onChange={(e) => setUsername(e.target.value)}
+  onKeyDown={(e) => e.key === "Enter" && login()}
+/>
 
         {/* PASSWORD */}
         <div style={styles.passwordBox}>
-          <input
-            style={styles.input}
-            placeholder="Password"
-            type={showPassword ? "text" : "password"}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
+<input
+  style={styles.input}
+  placeholder="Password"
+  type={showPassword ? "text" : "password"}
+  value={password}
+  onChange={(e) => setPassword(e.target.value)}
+  onKeyDown={(e) => e.key === "Enter" && login()}
+/>
 
           <span
             onClick={() => setShowPassword(!showPassword)}

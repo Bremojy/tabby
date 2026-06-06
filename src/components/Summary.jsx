@@ -3,6 +3,7 @@ import { getData } from "../utils/storage";
 
 export default function Summary() {
   const [summaries, setSummaries] = useState([]);
+  const [expandedDate, setExpandedDate] = useState(null);
 
   const role = localStorage.getItem("auth_role") || "staff";
 
@@ -54,6 +55,60 @@ export default function Summary() {
                 <p style={styles.label}>Total Sales</p>
                 <h4>Ksh {s.totalSales}</h4>
               </div>
+
+              <button
+  style={styles.detailBtn}
+  onClick={() =>
+    setExpandedDate(
+      expandedDate === s.date ? null : s.date
+    )
+  }
+>
+  {expandedDate === s.date
+    ? "Hide Details"
+    : "View Details"}
+</button>
+
+{expandedDate === s.date && (
+  <div style={styles.detailsBox}>
+    <h4>Items Sold</h4>
+
+    {s.salesData && s.salesData.length > 0 ? (
+      s.salesData.map((item, idx) => (
+        <div key={idx} style={styles.itemRow}>
+          <div>
+            <b>{item.name}</b>
+
+            <div style={styles.small}>
+              Qty: {item.quantity}
+            </div>
+          </div>
+
+          <div style={{ textAlign: "right" }}>
+            <div>
+              Sales: Ksh {item.total}
+            </div>
+
+            {role === "admin" && (
+              <div
+                style={{
+                  color: "#22c55e",
+                  fontSize: 12,
+                }}
+              >
+                Profit: Ksh {item.profit}
+              </div>
+            )}
+          </div>
+        </div>
+      ))
+    ) : (
+      <p style={{ color: "#777" }}>
+        No item details available
+      </p>
+    )}
+  </div>
+)}
 
               {/* ADMIN ONLY PROFIT */}
               {role === "admin" && (
@@ -116,7 +171,35 @@ const styles = {
     gap: 15,
     marginTop: 10,
   },
+detailBtn: {
+  marginTop: 12,
+  padding: "8px 12px",
+  border: "none",
+  borderRadius: 8,
+  background: "#2563eb",
+  color: "white",
+  cursor: "pointer",
+},
 
+detailsBox: {
+  marginTop: 12,
+  padding: 12,
+  borderTop: "1px solid #eee",
+  background: "rgba(255,255,255,0.6)",
+  borderRadius: 8,
+},
+
+itemRow: {
+  display: "flex",
+  justifyContent: "space-between",
+  padding: "8px 0",
+  borderBottom: "1px solid #eee",
+},
+
+small: {
+  fontSize: 12,
+  color: "#666",
+},
   card: {
     padding: 15,
     borderRadius: 14,
