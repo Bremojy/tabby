@@ -160,25 +160,25 @@ const addProduct = () => {
   return (
     <div style={styles.container}>
       {/* HEADER */}
-      <div style={styles.header}>
-        <h2>📦 Products</h2>
+     <div style={styles.header}>
+  <h2>📦 Products</h2>
 
-        <input
+  <span
+    style={{
+      ...styles.roleBadge,
+      background: role === "admin" ? "#7c3aed" : "#16a34a",
+    }}
+  >
+    {role.toUpperCase()}
+  </span>
+</div>
+
+<input
   style={styles.searchInput}
   placeholder="🔍 Search products..."
   value={search}
   onChange={(e) => setSearch(e.target.value)}
 />
-
-        <span
-          style={{
-            ...styles.roleBadge,
-            background: role === "admin" ? "#7c3aed" : "#16a34a",
-          }}
-        >
-          {role.toUpperCase()}
-        </span>
-      </div>
 
       {/* ADD PRODUCT (ADMIN ONLY) */}
       {role === "admin" && (
@@ -234,9 +234,9 @@ const addProduct = () => {
 
       {/* PRODUCT GRID */}
       <div style={styles.grid}>
-        {products
+{products
   .filter((p) =>
-    p.name.toLowerCase().includes(search.toLowerCase())
+    (p.name || "").toLowerCase().includes(search.toLowerCase())
   )
   .map((p) => (
           <div key={p.id} style={styles.card}>
