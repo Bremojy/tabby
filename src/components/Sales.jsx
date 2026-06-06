@@ -25,6 +25,14 @@ useEffect(() => {
   setSales(Array.isArray(getData("sales")) ? getData("sales") : []);
   setSummaries(getData("dailySummary") || []);
 }, []);
+useEffect(() => {
+  setProducts(getData("products") || []);
+
+  const salesData = getData("sales");
+  setSales(Array.isArray(salesData) ? salesData : []);
+
+  setSummaries(getData("dailySummary") || []);
+}, []);
 
   useEffect(() => {
   const checkReopen = () => {
@@ -50,18 +58,23 @@ const addSale = () => {
   const quantity = Number(qty);
 
   if (!product) return alert("Select product");
-  if (!quantity) return alert("Enter quantity");
+  if (!quantity || quantity <= 0) return alert("Enter valid quantity");
   if (product.stock < quantity) return alert("Not enough stock");
 
   const total = product.price * quantity;
   const profit = (product.price - product.cost) * quantity;
 
-  let updatedSales = [...sales]; // ✅ ALWAYS DEFINED
+  let updatedSales = [...sales]; // ALWAYS SAFE
 
   if (editId) {
     updatedSales = sales.map((s) =>
       s.id === editId
-        ? { ...s, qty: quantity, total, profit }
+        ? {
+            ...s,
+            qty: quantity,
+            total,
+            profit,
+          }
         : s
     );
   } else {
@@ -79,16 +92,24 @@ const addSale = () => {
     ];
   }
 
-  const updatedProducts = products.map((p) =>
-    p.id === product.id
-      ? {
-          ...p,
-          stock: editId
-            ? p.stock + sales.find((s) => s.id === editId)?.qty - quantity
-            : p.stock - quantity,
-        }
-      : p
-  );
+  // FIX STOCK UPDATE (SAFE FOR BOTH ADD + EDIT)
+  const oldSale = sales.find((s) => s.id === editId);
+
+  const updatedProducts = products.map((p) => {
+    if (p.id !== product.id) return p;
+
+    if (editId && oldSale) {
+      return {
+        ...p,
+        stock: p.stock + oldSale.qty - quantity,
+      };
+    }
+
+    return {
+      ...p,
+      stock: p.stock - quantity,
+    };
+  });
 
   setSales(updatedSales);
   setProducts(updatedProducts);
