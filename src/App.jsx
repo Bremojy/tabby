@@ -6,6 +6,7 @@ import Sales from "./components/Sales";
 import Summary from "./components/Summary";
 import Login from "./components/Login";
 import Signup from "./components/Signup";
+import Accounts from "./components/Accounts";
 
 function App() {
   const [page, setPage] = useState("dashboard");
@@ -50,6 +51,27 @@ function App() {
   };
 }, []);
 
+useEffect(() => {
+  const interval = setInterval(() => {
+    const now = Date.now();
+    const diff = now - lastActivity;
+
+    const TIMEOUT = 10 * 60 * 1000; // 10 minutes
+
+    if (loggedInUser && diff > TIMEOUT) {
+      localStorage.removeItem("loggedInUser");
+      localStorage.removeItem("auth_role");
+
+      setLoggedInUser(null);
+      setRole("staff");
+
+      alert("⏰ You were logged out due to inactivity");
+    }
+  }, 10000); // check every 10 sec
+
+  return () => clearInterval(interval);
+}, [lastActivity, loggedInUser]);
+
  const navItems = [
   { id: "dashboard", label: "Dashboard" },
   { id: "products", label: "Products" },
@@ -58,8 +80,11 @@ function App() {
 
 
   ...(role === "admin"
-    ? [{ id: "signup", label: "Create Staff" }]
-    : []),
+  ? [
+      { id: "signup", label: "Create Staff" },
+      { id: "accounts", label: "Accounts" },
+    ]
+  : []),
 ];
 
   const renderPage = () => {
@@ -75,6 +100,10 @@ function App() {
 
 case "signup":
   return role === "admin" ? <Signup /> : null;
+
+  case "accounts":
+  return role === "admin" ? <Accounts /> : null;
+  
       default:
         return <Dashboard />;
     }
