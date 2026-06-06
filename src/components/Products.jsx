@@ -4,6 +4,7 @@ import { getData, saveData } from "../utils/storage";
 export default function Products() {
   const [products, setProducts] = useState([]);
   const [editingId, setEditingId] = useState(null);
+  const [search, setSearch] = useState("");
 
   // ✅ FIXED ROLE DETECTION (MATCHES SALES.JSX)
   const role = (localStorage.getItem("auth_role") || "staff").toLowerCase();
@@ -18,28 +19,37 @@ export default function Products() {
   const [editFields, setEditFields] = useState(emptyProduct);
   const [newProduct, setNewProduct] = useState(emptyProduct);
 
- useEffect(() => {
+useEffect(() => {
   const loadProducts = () => {
-    const data = getData("products");
-    setProducts(Array.isArray(data) ? data : []);
+    const data = getData("products") || [];
+
+    const sorted = Array.isArray(data)
+      ? [...data].sort((a, b) =>
+          (a.name || "").localeCompare(b.name || "")
+        )
+      : [];
+
+    setProducts(sorted);
   };
 
   loadProducts();
 
   const interval = setInterval(() => {
-  const latest = getData("products") || [];
+    const latest = getData("products") || [];
 
-  setProducts((current) => {
-    if (JSON.stringify(current) === JSON.stringify(latest)) {
-      return current;
-    }
-    return latest;
-  });
-}, 1000);
+    setProducts((current) => {
+      const sorted = [...latest].sort((a, b) =>
+        (a.name || "").localeCompare(b.name || "")
+      );
 
-  const handleStorageChange = () => {
-    loadProducts();
-  };
+      if (JSON.stringify(current) === JSON.stringify(sorted)) {
+        return current;
+      }
+      return sorted;
+    });
+  }, 1000);
+
+  const handleStorageChange = () => loadProducts();
 
   window.addEventListener("storage", handleStorageChange);
 
@@ -159,6 +169,13 @@ setProducts(
       <div style={styles.header}>
         <h2>📦 Products</h2>
 
+        <input
+  style={styles.searchInput}
+  placeholder="🔍 Search products..."
+  value={search}
+  onChange={(e) => setSearch(e.target.value)}
+/>
+
         <span
           style={{
             ...styles.roleBadge,
@@ -223,7 +240,11 @@ setProducts(
 
       {/* PRODUCT GRID */}
       <div style={styles.grid}>
-        {products.map((p) => (
+        {products
+  .filter((p) =>
+    p.name.toLowerCase().includes(search.toLowerCase())
+  )
+  .map((p) => (
           <div key={p.id} style={styles.card}>
             {editingId === p.id ? (
               <>
@@ -332,6 +353,15 @@ const styles = {
     alignItems: "center",
     marginBottom: 15,
   },
+  searchInput: {
+  width: "100%",
+  padding: 12,
+  marginBottom: 15,
+  borderRadius: 10,
+  border: "1px solid #ddd",
+  outline: "none",
+  fontSize: 14,
+},
 
   roleBadge: {
     padding: "4px 10px",

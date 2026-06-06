@@ -11,6 +11,7 @@ function App() {
   const [page, setPage] = useState("dashboard");
   const [authPage, setAuthPage] = useState("login");
   const [showProfile, setShowProfile] = useState(false);
+  const [lastActivity, setLastActivity] = useState(Date.now());
 
   const [loggedInUser, setLoggedInUser] = useState(() =>
     localStorage.getItem("loggedInUser")
@@ -31,6 +32,23 @@ function App() {
 
     return () => window.removeEventListener("storage", syncAuth);
   }, []);
+  useEffect(() => {
+  const updateActivity = () => {
+    setLastActivity(Date.now());
+  };
+
+  window.addEventListener("mousemove", updateActivity);
+  window.addEventListener("keydown", updateActivity);
+  window.addEventListener("click", updateActivity);
+  window.addEventListener("touchstart", updateActivity);
+
+  return () => {
+    window.removeEventListener("mousemove", updateActivity);
+    window.removeEventListener("keydown", updateActivity);
+    window.removeEventListener("click", updateActivity);
+    window.removeEventListener("touchstart", updateActivity);
+  };
+}, []);
 
  const navItems = [
   { id: "dashboard", label: "Dashboard" },
