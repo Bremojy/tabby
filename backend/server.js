@@ -17,7 +17,11 @@ const app = express();
 
 /* MIDDLEWARE */
 app.use(cors({
-  origin: "http://localhost:5173",
+  origin: [
+    "http://localhost:5173",
+    "https://tabby-swart.vercel.app"
+  ],
+  credentials: true
 }));
 
 app.use(express.json()); // MUST BE BEFORE ROUTES
