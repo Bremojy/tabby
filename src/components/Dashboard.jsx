@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 
-const BASE_URL = "http://localhost:5000/api/sales";
+const BASE_URL = "http://tabby-shop-backend.onrender.com/api/sales";
 
 export default function Dashboard() {
   const [sales, setSales] = useState([]);
