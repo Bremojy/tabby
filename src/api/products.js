@@ -1,4 +1,4 @@
-const BASE_URL = "http://localhost:5000/api/products";
+const BASE_URL = "https://tabby-shop-backend.onrender.com/api/products";
 
 // GET products
 export const getProducts = async () => {
