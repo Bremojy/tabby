@@ -48,7 +48,7 @@ const [showPassword, setShowPassword] = useState(false);
     
     setLoading(true);
       const res = await fetch(
-        "http://tabby-shop-backend.onrender.com/api/auth/register",
+        "https://tabby-shop-backend.onrender.com/api/auth/register",
         {
           method: "POST",
           headers: {

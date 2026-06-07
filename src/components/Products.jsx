@@ -205,42 +205,93 @@ export default function Products() {
     {/* PRODUCTS */}
     <div style={styles.grid}>
       {filteredProducts.map((p) => (
-        <div key={p._id || p.id} style={styles.card}>
-          <h3 style={{ marginBottom: 5 }}>{p.name}</h3>
+  <div key={p._id || p.id} style={styles.card}>
+    
+    {/* EDIT MODE */}
+    {editingId === (p._id || p.id) ? (
+      <div>
+        <input
+          style={styles.input}
+          value={editFields.name}
+          onChange={(e) =>
+            setEditFields({ ...editFields, name: e.target.value })
+          }
+        />
 
-          <p style={styles.text}>
-            Stock: <b>{p.stock}</b>
-          </p>
+        <input
+          style={styles.input}
+          type="number"
+          value={editFields.stock}
+          onChange={(e) =>
+            setEditFields({ ...editFields, stock: e.target.value })
+          }
+        />
 
-          {role === "admin" && (
-            <p style={styles.text}>
-              Cost: <b>{p.cost}</b>
-            </p>
-          )}
+        <input
+          style={styles.input}
+          type="number"
+          value={editFields.cost}
+          onChange={(e) =>
+            setEditFields({ ...editFields, cost: e.target.value })
+          }
+        />
 
-          <p style={styles.text}>
-            Price: <b>{p.price}</b>
-          </p>
+        <input
+          style={styles.input}
+          type="number"
+          value={editFields.price}
+          onChange={(e) =>
+            setEditFields({ ...editFields, price: e.target.value })
+          }
+        />
 
-          {role === "admin" && (
-            <div style={styles.btnRow}>
-              <button
-                style={styles.editBtn}
-                onClick={() => startEditing(p)}
-              >
-                Edit
-              </button>
+        <div style={styles.btnRow}>
+          <button
+            style={styles.saveBtn}
+            onClick={() => saveEdit(p._id || p.id)}
+          >
+            Save
+          </button>
 
-              <button
-                style={styles.deleteBtn}
-                onClick={() => deleteProduct(p._id || p.id)}
-              >
-                Delete
-              </button>
-            </div>
-          )}
+          <button style={styles.cancelBtn} onClick={cancelEditing}>
+            Cancel
+          </button>
         </div>
-      ))}
+      </div>
+    ) : (
+      /* NORMAL VIEW */
+      <>
+        <h3 style={{ marginBottom: 5 }}>{p.name}</h3>
+
+        <p style={styles.text}>Stock: <b>{p.stock}</b></p>
+
+        {role === "admin" && (
+          <p style={styles.text}>Cost: <b>{p.cost}</b></p>
+        )}
+
+        <p style={styles.text}>Price: <b>{p.price}</b></p>
+
+        {role === "admin" && (
+          <div style={styles.btnRow}>
+            <button
+              style={styles.editBtn}
+              onClick={() => startEditing(p)}
+            >
+              Edit
+            </button>
+
+            <button
+              style={styles.deleteBtn}
+              onClick={() => deleteProduct(p._id || p.id)}
+            >
+              Delete
+            </button>
+          </div>
+        )}
+      </>
+    )}
+  </div>
+))}
     </div>
   </div>
 ); 
