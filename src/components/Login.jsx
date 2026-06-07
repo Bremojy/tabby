@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-const BASE_URL = "http://tabby-shop-backend.onrender.com/api/auth/login";
+const BASE_URL = "https://tabby-shop-backend.onrender.com/api/auth/login";
 
 export default function Login() {
   const [username, setUsername] = useState("");

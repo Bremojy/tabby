@@ -23,7 +23,7 @@ const [reopened, setReopened] = useState(
   const loadProducts = async () => {
   try {
     const res = await fetch(
-      "http://tabby-shop-backend.onrender.com/api/products"
+      "https://tabby-shop-backend.onrender.com/api/products"
     );
 
     const data = await res.json();

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 
-const BASE_URL = "http://tabby-shop-backend.onrender.com/api/products";
+const BASE_URL = "https://tabby-shop-backend.onrender.com/api/products";
 
 export default function Products() {
   const [products, setProducts] = useState([]);

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 
-const BASE_URL = "http://tabby-shop-backend.onrender.com/api/users";
+const BASE_URL = "https://tabby-shop-backend.onrender.com/api/users";
 
 export default function Accounts() {
   const [users, setUsers] = useState([]);
