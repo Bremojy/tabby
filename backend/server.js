@@ -11,30 +11,59 @@ import userRoutes from "./routes/userRoutes.js";
 
 dotenv.config();
 
+// Connect DB safely (avoid crash if DB fails)
 connectDB();
 
 const app = express();
 
-/* MIDDLEWARE */
-app.use(cors({
-  origin: [
-    "http://localhost:5173",
-    "https://tabby-swart.vercel.app"
-  ],
-  credentials: true
-}));
+/* =======================
+   MIDDLEWARE
+======================= */
 
-app.use(express.json()); // MUST BE BEFORE ROUTES
+// Allow frontend (Vercel + local dev)
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://tabby-swart.vercel.app"
+];
 
-/* ROUTES */
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // allow requests with no origin (like Postman)
+      if (!origin) return callback(null, true);
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      } else {
+        return callback(new Error("Blocked by CORS"));
+      }
+    },
+    credentials: true,
+  })
+);
+
+app.use(express.json());
+
+/* =======================
+   ROUTES
+======================= */
+
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/sales", salesRoutes);
 
+/* Health check route */
 app.get("/", (req, res) => {
-  res.send("🚀 Tabby POS Backend Running");
+  res.json({
+    success: true,
+    message: "🚀 Tabby POS Backend Running",
+  });
 });
+
+/* =======================
+   SERVER START
+======================= */
 
 const PORT = process.env.PORT || 5000;
 
