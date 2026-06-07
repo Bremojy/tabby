@@ -19,32 +19,37 @@ const [reopened, setReopened] = useState(
 
   const role = localStorage.getItem("auth_role") || "staff";
 
+
+  const loadProducts = async () => {
+  try {
+    const res = await fetch(
+      "http://localhost:5000/api/products"
+    );
+
+    const data = await res.json();
+
+    setProducts(Array.isArray(data) ? data : []);
+  } catch (err) {
+    console.error("Failed to load products", err);
+  }
+};
+
  
 
   /* ================= LOAD DATA ================= */
 useEffect(() => {
-  const loadAll = () => {
-    const productsData = getData("products");
-    const salesData = getData("sales");
-    const summaryData = getData("dailySummary");
+  const loadAll = async () => {
+    await loadProducts();
 
-    setProducts(Array.isArray(productsData) ? productsData : []);
-    setSales(Array.isArray(salesData) ? salesData : []);
-    setSummaries(Array.isArray(summaryData) ? summaryData : []);
+    const salesData = getData("sales") || [];
+    const summaryData =
+      getData("dailySummary") || [];
+
+    setSales(salesData);
+    setSummaries(summaryData);
   };
 
   loadAll();
-
-  const interval = setInterval(loadAll, 500);
-
-  const sync = () => loadAll();
-
-  window.addEventListener("storage", sync);
-
-  return () => {
-    clearInterval(interval);
-    window.removeEventListener("storage", sync);
-  };
 }, []);
   useEffect(() => {
   const checkReopen = () => {
@@ -63,10 +68,15 @@ const alreadyClosed =
     if (alreadyClosed)
   return alert("⚠️ Shift is closed");
     const product = products.find(
-      (p) => p.id === Number(selected)
-    );
+  (p) =>
+    String(p._id) === String(selected) ||
+    String(p.id) === String(selected)
+);
 
     const quantity = Number(qty);
+
+    console.log("Selected ID:", selected);
+console.log("Products:", products);
 
     if (!product) return alert("Select product");
     if (!quantity || quantity <= 0)
@@ -81,7 +91,7 @@ const alreadyClosed =
 
     const newSale = {
       id: Date.now(),
-      productId: product.id,
+      productId: product._id || product.id,
       name: product.name,
       qty: quantity,
       total,
@@ -89,9 +99,17 @@ const alreadyClosed =
       date: today,
     };
 
-    let updatedSales;
+ let updatedSales = [];
+let updatedProducts = [...products];
 
 if (editId) {
+  const oldSale = sales.find(
+    (s) => s.id === editId
+  );
+
+  const stockDifference =
+    quantity - oldSale.qty;
+
   updatedSales = sales.map((s) =>
     s.id === editId
       ? {
@@ -102,18 +120,30 @@ if (editId) {
         }
       : s
   );
+
+  updatedProducts = products.map((p) =>
+    (p._id || p.id) ===
+    (product._id || product.id)
+      ? {
+          ...p,
+          stock: p.stock - stockDifference,
+        }
+      : p
+  );
 } else {
   updatedSales = [...sales, newSale];
+
+  updatedProducts = products.map((p) =>
+    (p._id || p.id) ===
+    (product._id || product.id)
+      ? {
+          ...p,
+          stock: p.stock - quantity,
+        }
+      : p
+  );
 }
 
-   const updatedProducts = products.map((p) =>
-  p.id === product.id
-    ? {
-        ...p,
-        stock: p.stock - quantity,
-      }
-    : p
-);
 
     setSales(updatedSales);
     setProducts(updatedProducts);
@@ -139,7 +169,7 @@ if (editId) {
     );
 
     const updatedProducts = products.map((p) =>
-      p.id === sale.productId
+      (p._id || p.id) === sale.productId
         ? {
             ...p,
             stock: p.stock + sale.qty,
@@ -160,6 +190,10 @@ if (editId) {
   const todaySales = sales.filter(
     (s) => s.date === today
   );
+  const totalSalesAmount = todaySales.reduce(
+  (sum, sale) => sum + sale.total,
+  0
+);
 
   const totalProfit = todaySales.reduce(
     (a, b) => a + (b.profit || 0),
@@ -184,7 +218,10 @@ if (editId) {
     salesData: [...todaySales],
   };
 
-  const updated = [...summaries, summary];
+  const updated = [
+  ...summaries.filter((s) => s.date !== today),
+  summary,
+];
 
   setSummaries(updated);
 
@@ -196,7 +233,6 @@ if (editId) {
 
   alert("✅ Shift Closed");
 };
-
 const reopenShift = () => {
   if (role !== "admin")
     return alert("Admin only");
@@ -212,6 +248,8 @@ const reopenShift = () => {
   localStorage.setItem(reopenKey, "true");
 
   setReopened(true);
+
+  window.dispatchEvent(new Event("storage"));
 
   alert("🔓 Shift Reopened");
 };
@@ -232,23 +270,28 @@ const reopenShift = () => {
 
       {/* STATS CARDS */}
       <div style={styles.statsRow}>
-        <div style={styles.statCard}>
-          <h3>{todaySales.length}</h3>
-          <p>Today Sales</p>
-        </div>
-
-        {role === "admin" && (
   <div style={styles.statCard}>
-    <h3>Ksh {totalProfit}</h3>
-    <p>Total Profit</p>
+    <h3>{todaySales.length}</h3>
+    <p>Transactions</p>
   </div>
-)}
 
-        <div style={styles.statCard}>
-          <h3>{products.length}</h3>
-          <p>Products</p>
-        </div>
-      </div>
+  <div style={styles.statCard}>
+    <h3>Ksh {totalSalesAmount.toLocaleString()}</h3>
+    <p>Total Sales</p>
+  </div>
+
+  {role === "admin" && (
+    <div style={styles.statCard}>
+      <h3>Ksh {totalProfit.toLocaleString()}</h3>
+      <p>Total Profit</p>
+    </div>
+  )}
+
+  <div style={styles.statCard}>
+    <h3>{products.length}</h3>
+    <p>Products</p>
+  </div>
+</div>
 
       {/* ADD SALE CARD */}
       <div style={styles.card}>
@@ -256,17 +299,24 @@ const reopenShift = () => {
 
         <div style={styles.row}>
           <select
-            style={styles.input}
-            value={selected}
-            onChange={(e) => setSelected(e.target.value)}
-          >
-            <option value="">Select Product</option>
-            {products.map((p) => (
-  <option key={p.id} value={p.id}>
-    {p.name} (Stock: {p.stock})
-  </option>
-))}
-          </select>
+  style={styles.input}
+  value={selected}
+  onChange={(e) => {
+    console.log("Selected:", e.target.value);
+    setSelected(e.target.value);
+  }}
+>
+  <option value="">Select Product</option>
+
+  {products.map((p) => (
+    <option
+  key={p._id || p.id}
+  value={String(p._id || p.id)}
+>
+      {p.name} (Stock: {p.stock})
+    </option>
+  ))}
+</select>
 
           <input
             style={styles.input}
@@ -400,11 +450,11 @@ const styles = {
   }),
 
   statsRow: {
-    display: "grid",
-    gridTemplateColumns: "repeat(3, 1fr)",
-    gap: 10,
-    marginBottom: 15,
-  },
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+  gap: 12,
+  marginBottom: 20,
+},
 
   statCard: {
     padding: 15,

@@ -47,6 +47,8 @@ export default function Products() {
 
     if (Number(newProduct.price) < Number(newProduct.cost)) {
       return alert("Selling price cannot be lower than cost");
+    
+    
     }
 
     const product = {
@@ -73,6 +75,7 @@ export default function Products() {
   /* ================= DELETE ================= */
   const deleteProduct = async (id) => {
     if (role !== "admin") return alert("❌ Staff cannot delete products");
+    
 
     try {
       await fetch(`${BASE_URL}/${id}`, {
@@ -88,6 +91,7 @@ export default function Products() {
   /* ================= EDIT ================= */
   const startEditing = (product) => {
     if (role !== "admin") return alert("❌ Staff cannot edit products");
+    
 
     setEditingId(product._id);
     setEditFields(product);
@@ -103,6 +107,7 @@ export default function Products() {
 
       setEditingId(null);
       fetchProducts();
+      
     } catch (err) {
       console.log(err);
     }

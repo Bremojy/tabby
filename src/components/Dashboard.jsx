@@ -19,16 +19,27 @@ export default function Dashboard() {
   }, []);
 
   const fetchSales = async () => {
-    try {
-      const res = await fetch(BASE_URL);
-      const data = await res.json();
+  try {
+    const token = localStorage.getItem("token");
 
-      setSales(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.log("Dashboard error:", err);
-      setSales([]);
+    const res = await fetch(BASE_URL, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
     }
-  };
+
+    const data = await res.json();
+
+    setSales(Array.isArray(data) ? data : []);
+  } catch (err) {
+    console.log("Dashboard error:", err);
+    setSales([]);
+  }
+};
 
   const toTime = (date) => new Date(date).getTime();
 
@@ -65,6 +76,16 @@ export default function Dashboard() {
     0
   );
 
+  const uniqueProducts = new Set(
+  filteredSales.map((s) => s.productId)
+).size;
+
+const today = new Date().toISOString().split("T")[0];
+
+const todayTransactions = filteredSales.filter(
+  (s) => s.date === today
+).length;
+
   const formatKsh = (v) =>
     `Ksh ${Number(v || 0).toLocaleString()}`;
 
@@ -92,102 +113,133 @@ export default function Dashboard() {
         </div>
 
         {/* FILTER */}
-        <div style={styles.filterBox}>
-          <input
-            type="date"
-            value={fromDate}
-            onChange={(e) =>
-              setFromDate(e.target.value)
-            }
-          />
+        <div style={styles.modernFilter}>
 
           <input
-            type="date"
-            value={toDate}
-            onChange={(e) =>
-              setToDate(e.target.value)
-            }
-          />
+  type="date"
+  style={styles.dateInput}
+  value={fromDate}
+  onChange={(e) => setFromDate(e.target.value)}
+/>
 
-          <button
-            onClick={() => {
-              setFromDate("");
-              setToDate("");
-            }}
-          >
-            Reset
-          </button>
+<input
+  type="date"
+  style={styles.dateInput}
+  value={toDate}
+  onChange={(e) => setToDate(e.target.value)}
+/>
+
+<button
+  style={styles.resetBtn}
+  onClick={() => {
+    setFromDate("");
+    setToDate("");
+  }}
+>
+  Reset
+</button>
         </div>
       </div>
 
       {/* STATS */}
       <div style={styles.grid}>
-        <div style={styles.card}>
-          <p>Total Sales</p>
-          <h3>{formatKsh(totalSales)}</h3>
-        </div>
+  <div style={styles.statCard}>
+    <h2>{formatKsh(totalSales)}</h2>
+    <p>Total Sales</p>
+  </div>
 
-        <div style={styles.card}>
-          <p>Items Sold</p>
-          <h3>{itemsSold}</h3>
-        </div>
+  <div style={styles.statCard}>
+    <h2>{itemsSold}</h2>
+    <p>Items Sold</p>
+  </div>
+
+  <div style={styles.statCard}>
+    <h2>{todayTransactions}</h2>
+    <p>Today's Transactions</p>
+  </div>
+
+  <div style={styles.statCard}>
+    <h2>{uniqueProducts}</h2>
+    <p>Products Sold</p>
+  </div>
+
+  {role === "admin" && (
+    <div style={styles.statCard}>
+      <h2 style={{ color: "#22c55e" }}>
+        {formatKsh(totalProfit)}
+      </h2>
+      <p>Total Profit</p>
+    </div>
+  )}
+</div>
+      {/* TRANSACTIONS */}
+      <div>
+  <h3>🧾 Transactions</h3>
+
+  {filteredSales.length === 0 ? (
+    <p>No transactions</p>
+  ) : (
+    filteredSales.map((s) => (
+      <div key={s._id || s.id} style={styles.card}>
+        <b>{s.name}</b>
+
+        <p>
+          Qty: {s.qty} | Total: {formatKsh(s.total)}
+        </p>
 
         {role === "admin" && (
-          <div style={styles.card}>
-            <p>Profit</p>
-            <h3 style={{ color: "#22c55e" }}>
-              {formatKsh(totalProfit)}
-            </h3>
+          <p style={{ color: "#22c55e" }}>
+            Profit: {formatKsh(s.profit)}
+          </p>
+        )}
+
+        <button
+          style={styles.viewBtn}
+          onClick={() =>
+            setExpandedDate(
+              expandedDate === (s._id || s.id)
+                ? null
+                : (s._id || s.id)
+            )
+          }
+        >
+          {expandedDate === (s._id || s.id)
+            ? "Hide Details"
+            : "View Details"}
+        </button>
+
+        {expandedDate === (s._id || s.id) && (
+          <div style={styles.detailBox}>
+            <p>
+              <strong>Product:</strong> {s.name}
+            </p>
+
+            <p>
+              <strong>Quantity:</strong> {s.qty}
+            </p>
+
+            <p>
+              <strong>Total:</strong> {formatKsh(s.total)}
+            </p>
+
+            <p>
+              <strong>Date:</strong> {s.date}
+            </p>
+
+            {role === "admin" && (
+              <p style={{ color: "#22c55e" }}>
+                <strong>Profit:</strong>{" "}
+                {formatKsh(s.profit)}
+              </p>
+            )}
           </div>
         )}
       </div>
-
-      {/* TRANSACTIONS */}
-      <div>
-        <h3>🧾 Transactions</h3>
-
-        {filteredSales.length === 0 ? (
-          <p>No transactions</p>
-        ) : (
-          filteredSales.map((s) => (
-            <div key={s._id || s.id} style={styles.card}>
-              <b>{s.name}</b>
-
-              <p>
-                Qty: {s.qty} | Total:{" "}
-                {formatKsh(s.total)}
-              </p>
-
-              {role === "admin" && (
-                <p style={{ color: "#22c55e" }}>
-                  Profit: {formatKsh(s.profit)}
-                </p>
-              )}
-
-              <button
-                onClick={() =>
-                  setExpandedDate(
-                    expandedDate === s.date
-                      ? null
-                      : s.date
-                  )
-                }
-              >
-                {expandedDate === s.date
-                  ? "Hide"
-                  : "View"}
-              </button>
-
-              {expandedDate === s.date && (
-                <div>
-                  <small>Date: {s.date}</small>
-                </div>
-              )}
-            </div>
-          ))
-        )}
+    ))
+  )}
+</div>
       </div>
-    </div>
+    
   );
 }
 
@@ -200,6 +252,52 @@ const styles = {
     flexWrap: "wrap",
     gap: 10,
   },
+  modernFilter: {
+  display: "flex",
+  gap: 10,
+  flexWrap: "wrap",
+  alignItems: "center",
+},
+
+dateInput: {
+  padding: 10,
+  borderRadius: 10,
+  border: "1px solid #ddd",
+},
+
+resetBtn: {
+  padding: "10px 16px",
+  border: "none",
+  borderRadius: 10,
+  background: "#2563eb",
+  color: "#fff",
+  cursor: "pointer",
+},
+
+statCard: {
+  background: "#fff",
+  borderRadius: 12,
+  padding: 20,
+  textAlign: "center",
+  boxShadow: "0 2px 10px rgba(0,0,0,0.08)",
+},
+
+viewBtn: {
+  marginTop: 10,
+  padding: "8px 14px",
+  border: "none",
+  borderRadius: 8,
+  background: "#2563eb",
+  color: "#fff",
+  cursor: "pointer",
+},
+
+detailBox: {
+  marginTop: 10,
+  padding: 12,
+  background: "#f8fafc",
+  borderRadius: 10,
+},
   badge: {
     padding: "3px 10px",
     borderRadius: 20,
