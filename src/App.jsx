@@ -10,7 +10,6 @@ import Accounts from "./components/Accounts";
 
 function App() {
   const [page, setPage] = useState("dashboard");
-  const [authPage, setAuthPage] = useState("login");
   const [showProfile, setShowProfile] = useState(false);
   const [lastActivity, setLastActivity] = useState(Date.now());
 
@@ -22,6 +21,7 @@ function App() {
     localStorage.getItem("auth_role") || "staff"
   );
 
+  /* ================= SYNC AUTH ================= */
   useEffect(() => {
     const syncAuth = () => {
       setLoggedInUser(localStorage.getItem("loggedInUser"));
@@ -33,60 +33,60 @@ function App() {
 
     return () => window.removeEventListener("storage", syncAuth);
   }, []);
+
+  /* ================= ACTIVITY TRACKING ================= */
   useEffect(() => {
-  const updateActivity = () => {
-    setLastActivity(Date.now());
-  };
+    const updateActivity = () => setLastActivity(Date.now());
 
-  window.addEventListener("mousemove", updateActivity);
-  window.addEventListener("keydown", updateActivity);
-  window.addEventListener("click", updateActivity);
-  window.addEventListener("touchstart", updateActivity);
+    window.addEventListener("mousemove", updateActivity);
+    window.addEventListener("keydown", updateActivity);
+    window.addEventListener("click", updateActivity);
+    window.addEventListener("touchstart", updateActivity);
 
-  return () => {
-    window.removeEventListener("mousemove", updateActivity);
-    window.removeEventListener("keydown", updateActivity);
-    window.removeEventListener("click", updateActivity);
-    window.removeEventListener("touchstart", updateActivity);
-  };
-}, []);
+    return () => {
+      window.removeEventListener("mousemove", updateActivity);
+      window.removeEventListener("keydown", updateActivity);
+      window.removeEventListener("click", updateActivity);
+      window.removeEventListener("touchstart", updateActivity);
+    };
+  }, []);
 
-useEffect(() => {
-  const interval = setInterval(() => {
-    const now = Date.now();
-    const diff = now - lastActivity;
+  /* ================= AUTO LOGOUT ================= */
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const diff = Date.now() - lastActivity;
+      const TIMEOUT = 10 * 60 * 1000;
 
-    const TIMEOUT = 10 * 60 * 1000; // 10 minutes
+      if (loggedInUser && diff > TIMEOUT) {
+        localStorage.removeItem("loggedInUser");
+        localStorage.removeItem("auth_role");
 
-    if (loggedInUser && diff > TIMEOUT) {
-      localStorage.removeItem("loggedInUser");
-      localStorage.removeItem("auth_role");
+        setLoggedInUser(null);
+        setRole("staff");
 
-      setLoggedInUser(null);
-      setRole("staff");
+        alert("⏰ Logged out due to inactivity");
+      }
+    }, 10000);
 
-      alert("⏰ You were logged out due to inactivity");
-    }
-  }, 10000); // check every 10 sec
+    return () => clearInterval(interval);
+  }, [lastActivity, loggedInUser]);
 
-  return () => clearInterval(interval);
-}, [lastActivity, loggedInUser]);
+  /* ================= NAV ITEMS ================= */
+  const navItems = [
+    { id: "dashboard", label: "Dashboard" },
+    { id: "products", label: "Products" },
+    { id: "sales", label: "Sales" },
+    { id: "summary", label: "Monthly Summary" },
 
- const navItems = [
-  { id: "dashboard", label: "Dashboard" },
-  { id: "products", label: "Products" },
-  { id: "sales", label: "Sales" },
-  { id: "summary", label: "Monthly Summary" },
+    ...(role === "admin"
+      ? [
+          { id: "signup", label: "Create Staff" },
+          { id: "accounts", label: "Accounts" },
+        ]
+      : []),
+  ];
 
-
-  ...(role === "admin"
-  ? [
-      { id: "signup", label: "Create Staff" },
-      { id: "accounts", label: "Accounts" },
-    ]
-  : []),
-];
-
+  /* ================= PAGE ROUTER ================= */
   const renderPage = () => {
     switch (page) {
       case "dashboard":
@@ -95,15 +95,12 @@ useEffect(() => {
         return <Products role={role} />;
       case "sales":
         return <Sales role={role} />;
-     case "summary":
-  return <Summary role={role} />;
-
-case "signup":
-  return role === "admin" ? <Signup /> : null;
-
-  case "accounts":
-  return role === "admin" ? <Accounts /> : null;
-  
+      case "summary":
+        return <Summary role={role} />;
+      case "signup":
+        return role === "admin" ? <Signup /> : <Dashboard />;
+      case "accounts":
+        return role === "admin" ? <Accounts /> : <Dashboard />;
       default:
         return <Dashboard />;
     }
@@ -119,21 +116,22 @@ case "signup":
     fontWeight: "600",
   });
 
-  // AUTH SCREEN
-if (!loggedInUser) {
-  return (
-    <div style={{ fontFamily: "Arial" }}>
-      <header style={{ padding: 20, background: "#111827", color: "white" }}>
-        <h1>📊 TABBY SHOP POS</h1>
-      </header>
+  /* ================= AUTH SCREEN ================= */
+  if (!loggedInUser) {
+    return (
+      <div style={{ fontFamily: "Arial" }}>
+        <header style={{ padding: 20, background: "#111827", color: "white" }}>
+          <h1>📊 TABBY SHOP POS</h1>
+        </header>
 
-      <div style={{ padding: 20 }}>
-        <Login />
+        <div style={{ padding: 20 }}>
+          <Login />
+        </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
 
+  /* ================= MAIN APP ================= */
   return (
     <div style={{ fontFamily: "Arial", minHeight: "100vh" }}>
       {/* NAVBAR */}
@@ -150,20 +148,22 @@ if (!loggedInUser) {
       >
         <div style={{ fontWeight: "bold" }}>📊 Tabby POS</div>
 
-        {/* NAV */}
         <nav style={{ display: "flex", gap: 10 }}>
           {navItems.map((item) => (
             <button
               key={item.id}
               style={btnStyle(page === item.id)}
-              onClick={() => setPage(item.id)}
+              onClick={() => {
+                setPage(item.id);
+                setShowProfile(false);
+              }}
             >
               {item.label}
             </button>
           ))}
         </nav>
 
-        {/* PROFILE SECTION */}
+        {/* PROFILE */}
         <div style={{ position: "relative" }}>
           <div
             onClick={() => setShowProfile(!showProfile)}
@@ -172,23 +172,23 @@ if (!loggedInUser) {
             {loggedInUser?.charAt(0).toUpperCase()}
           </div>
 
-          {/* PROFILE CARD */}
           {showProfile && (
             <div style={styles.profileCard}>
-              <h4 style={{ marginBottom: 10 }}>👤 Profile</h4>
-
-              <p><b>User:</b> {loggedInUser}</p>
+              <h4>👤 Profile</h4>
 
               <p>
-                <b>Role:</b>{" "}
-                <span style={{ color: role === "admin" ? "#a855f7" : "#22c55e" }}>
-                  {role.toUpperCase()}
-                </span>
+                <b>User:</b> {loggedInUser}
               </p>
 
               <p>
-                <b>Status:</b>{" "}
-                <span style={{ color: "#16a34a" }}>Online</span>
+                <b>Role:</b>{" "}
+                <span
+                  style={{
+                    color: role === "admin" ? "#a855f7" : "#22c55e",
+                  }}
+                >
+                  {role.toUpperCase()}
+                </span>
               </p>
 
               <button
@@ -209,7 +209,6 @@ if (!loggedInUser) {
         </div>
       </header>
 
-      {/* MAIN */}
       <main style={{ padding: 20 }}>{renderPage()}</main>
     </div>
   );
@@ -217,7 +216,7 @@ if (!loggedInUser) {
 
 export default App;
 
-/* STYLES */
+/* ================= STYLES ================= */
 const styles = {
   avatar: {
     width: 38,
@@ -242,7 +241,6 @@ const styles = {
     padding: 15,
     borderRadius: 12,
     boxShadow: "0 10px 25px rgba(0,0,0,0.4)",
-    backdropFilter: "blur(10px)",
     zIndex: 999,
   },
 

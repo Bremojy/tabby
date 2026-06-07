@@ -1,239 +1,321 @@
-import React, { useEffect, useState } from "react";
-import { getData } from "../utils/storage";
+import React, { useState, useEffect } from "react";
 
-export default function Summary() {
-  const [summaries, setSummaries] = useState([]);
-  const [expandedDate, setExpandedDate] = useState(null);
+const PRODUCTS_URL = "http://localhost:5000/api/products";
+const SALES_URL = "http://localhost:5000/api/sales";
 
-  const role = localStorage.getItem("auth_role") || "staff";
+export default function Sales() {
+  const [products, setProducts] = useState([]);
+  const [sales, setSales] = useState([]);
+  const [shiftClosed, setShiftClosed] = useState(false);
 
+  const [selected, setSelected] = useState("");
+  const [qty, setQty] = useState("");
+
+  const role = (localStorage.getItem("auth_role") || "staff").toLowerCase();
+  const token = localStorage.getItem("token");
+
+  const today = new Date().toISOString().split("T")[0];
+  const shiftKey = `shift_closed_${today}`;
+
+  const isAdmin = role === "admin";
+
+  /* ================= LOAD DATA ================= */
   useEffect(() => {
-    const data = getData("dailySummary");
-    setSummaries(Array.isArray(data) ? data : []);
+    fetchProducts();
+    fetchSales();
+
+    const savedShift = localStorage.getItem(shiftKey);
+    setShiftClosed(savedShift === "true");
+
+    const interval = setInterval(() => {
+      fetchProducts();
+      fetchSales();
+    }, 5000);
+
+    return () => clearInterval(interval);
   }, []);
+
+  const fetchProducts = async () => {
+    try {
+      const res = await fetch(PRODUCTS_URL, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      setProducts(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
+  const fetchSales = async () => {
+    try {
+      const res = await fetch(SALES_URL, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      setSales(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
+  /* ================= ADD SALE ================= */
+  const addSale = async () => {
+    if (shiftClosed) return alert("⚠️ Shift is closed");
+
+    const product = products.find((p) => p._id === selected);
+    const quantity = Number(qty);
+
+    if (!product) return alert("Select product");
+    if (!quantity || quantity <= 0) return alert("Invalid quantity");
+    if (product.stock < quantity) return alert("Not enough stock");
+
+    await fetch(SALES_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        productId: product._id,
+        qty: quantity,
+        date: today,
+      }),
+    });
+
+    setSelected("");
+    setQty("");
+
+    fetchSales();
+    fetchProducts();
+  };
+
+  /* ================= CLOSE SHIFT ================= */
+  const closeShift = () => {
+    if (shiftClosed) return alert("Shift already closed");
+
+    const todaySales = sales.filter((s) => s.date === today);
+
+    if (todaySales.length === 0) {
+      return alert("No sales to close");
+    }
+
+    localStorage.setItem(shiftKey, "true");
+    setShiftClosed(true);
+
+    alert("🔒 Shift Closed Successfully");
+  };
+
+  /* ================= REOPEN SHIFT ================= */
+  const reopenShift = () => {
+    if (!isAdmin) {
+      return alert("Only admin can reopen shift");
+    }
+
+    localStorage.removeItem(shiftKey);
+    setShiftClosed(false);
+
+    alert("🔓 Shift Reopened");
+  };
+
+  /* ================= DELETE ================= */
+  const deleteSale = async (id) => {
+    await fetch(`${SALES_URL}/${id}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    fetchSales();
+    fetchProducts();
+  };
+
+  const todaySales = sales.filter((s) => s.date === today);
+  const totalProfit = todaySales.reduce((a, b) => a + (b.profit || 0), 0);
 
   return (
     <div style={styles.container}>
       {/* HEADER */}
       <div style={styles.header}>
-        <h2>📊 Monthly Summary</h2>
+        <h2>💰 Sales</h2>
 
-        <span
-          style={{
-            ...styles.roleBadge,
-            background: role === "admin" ? "#7c3aed" : "#16a34a",
-          }}
-        >
+        <span style={styles.badge(role)}>
           {role.toUpperCase()}
         </span>
       </div>
 
-      {/* EMPTY STATE */}
-      {summaries.length === 0 && (
-        <div style={styles.empty}>
-          <p>📭 No summaries available yet.</p>
+      {/* SHIFT CONTROLS */}
+      <div style={styles.shiftBox}>
+        {!shiftClosed && (
+          <button style={styles.closeBtn} onClick={closeShift}>
+            🔒 Close Shift
+          </button>
+        )}
+
+        {shiftClosed && isAdmin && (
+          <button style={styles.reopenBtn} onClick={reopenShift}>
+            🔓 Reopen Shift
+          </button>
+        )}
+      </div>
+
+      {/* ADD SALE */}
+      <div style={styles.card}>
+        <h3>Add Sale</h3>
+
+        <div style={styles.row}>
+          <select
+            style={styles.input}
+            value={selected}
+            onChange={(e) => setSelected(e.target.value)}
+          >
+            <option value="">Select Product</option>
+            {products.map((p) => (
+              <option key={p._id} value={p._id}>
+                {p.name} (Stock: {p.stock})
+              </option>
+            ))}
+          </select>
+
+          <input
+            style={styles.input}
+            type="number"
+            value={qty}
+            onChange={(e) => setQty(e.target.value)}
+            placeholder="Qty"
+          />
+
+          <button style={styles.addBtn} onClick={addSale}>
+            Add
+          </button>
         </div>
-      )}
+      </div>
 
-      {/* SUMMARY GRID */}
-      <div style={styles.grid}>
-        {summaries.map((s, index) => (
-          <div key={index} style={styles.card}>
-            {/* DATE HEADER */}
-            <div style={styles.dateRow}>
-              <h3 style={{ margin: 0 }}>📅 {s.date}</h3>
-            </div>
+      {/* SUMMARY */}
+      <div style={styles.summary}>
+        <h4>Today Summary</h4>
+        <p>Sales: {todaySales.length}</p>
 
-            {/* STATS */}
-            <div style={styles.stats}>
-              <div style={styles.statBox}>
-                <p style={styles.label}>Items Sold</p>
-                <h4>{s.itemsSold}</h4>
-              </div>
+        {/* ONLY ADMIN SEES PROFIT */}
+        {isAdmin && (
+          <p style={{ color: "green" }}>
+            Profit: Ksh {totalProfit}
+          </p>
+        )}
+      </div>
 
-              <div style={styles.statBox}>
-                <p style={styles.label}>Total Sales</p>
-                <h4>Ksh {s.totalSales}</h4>
-              </div>
+      {/* SALES LIST */}
+      <h3>Today Sales</h3>
 
-              <button
-  style={styles.detailBtn}
-  onClick={() =>
-    setExpandedDate(
-      expandedDate === s.date ? null : s.date
-    )
-  }
->
-  {expandedDate === s.date
-    ? "Hide Details"
-    : "View Details"}
-</button>
-
-{expandedDate === s.date && (
-  <div style={styles.detailsBox}>
-    <h4>Items Sold</h4>
-
-    {s.salesData && s.salesData.length > 0 ? (
-      s.salesData.map((item, idx) => (
-        <div key={idx} style={styles.itemRow}>
+      {todaySales.map((s) => (
+        <div key={s._id} style={styles.cardItem}>
           <div>
-            <b>{item.name}</b>
+            <b>{s.name}</b>
+            <p>Qty: {s.qty} | Total: Ksh {s.total}</p>
 
-            <div style={styles.small}>
-              Qty: {item.quantity}
-            </div>
-          </div>
-
-          <div style={{ textAlign: "right" }}>
-            <div>
-              Sales: Ksh {item.total}
-            </div>
-
-            {role === "admin" && (
-              <div
-                style={{
-                  color: "#22c55e",
-                  fontSize: 12,
-                }}
-              >
-                Profit: Ksh {item.profit}
-              </div>
-            )}
-          </div>
-        </div>
-      ))
-    ) : (
-      <p style={{ color: "#777" }}>
-        No item details available
-      </p>
-    )}
-  </div>
-)}
-
-              {/* ADMIN ONLY PROFIT */}
-              {role === "admin" && (
-                <div style={{ ...styles.statBox, borderColor: "#22c55e" }}>
-                  <p style={styles.label}>Profit</p>
-                  <h4 style={{ color: "#22c55e" }}>
-                    Ksh {s.totalProfit}
-                  </h4>
-                </div>
-              )}
-            </div>
-
-            {/* STAFF INFO */}
-            {role !== "admin" && (
-              <p style={styles.note}>
-                🔒 Profit hidden (admin only)
+            {/* ONLY ADMIN SEES PROFIT */}
+            {isAdmin && (
+              <p style={{ color: "green" }}>
+                Profit: Ksh {s.profit}
               </p>
             )}
           </div>
-        ))}
-      </div>
+
+          <button
+            style={styles.delBtn}
+            onClick={() => deleteSale(s._id)}
+          >
+            Delete
+          </button>
+        </div>
+      ))}
     </div>
   );
 }
 
-/* ================= MODERN UI STYLES ================= */
+/* ================= STYLES ================= */
 
 const styles = {
-  container: {
-    padding: 20,
-    fontFamily: "Arial",
-  },
+  container: { padding: 20, fontFamily: "Arial" },
 
   header: {
     display: "flex",
     justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 15,
   },
 
-  roleBadge: {
-    padding: "4px 10px",
+  badge: (role) => ({
+    padding: "6px 12px",
     borderRadius: 20,
     color: "white",
-    fontSize: 12,
-    fontWeight: "bold",
+    background: role === "admin" ? "#7c3aed" : "#16a34a",
+  }),
+
+  shiftBox: {
+    display: "flex",
+    gap: 10,
+    margin: "10px 0",
   },
 
-  empty: {
-    padding: 20,
-    border: "1px dashed #ccc",
-    borderRadius: 12,
-    textAlign: "center",
-    color: "#777",
+  closeBtn: {
+    background: "#ef4444",
+    color: "white",
+    border: "none",
+    padding: 10,
+    borderRadius: 8,
   },
 
-  grid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-    gap: 15,
-    marginTop: 10,
+  reopenBtn: {
+    background: "#22c55e",
+    color: "white",
+    border: "none",
+    padding: 10,
+    borderRadius: 8,
   },
-detailBtn: {
-  marginTop: 12,
-  padding: "8px 12px",
-  border: "none",
-  borderRadius: 8,
-  background: "#2563eb",
-  color: "white",
-  cursor: "pointer",
-},
 
-detailsBox: {
-  marginTop: 12,
-  padding: 12,
-  borderTop: "1px solid #eee",
-  background: "rgba(255,255,255,0.6)",
-  borderRadius: 8,
-},
-
-itemRow: {
-  display: "flex",
-  justifyContent: "space-between",
-  padding: "8px 0",
-  borderBottom: "1px solid #eee",
-},
-
-small: {
-  fontSize: 12,
-  color: "#666",
-},
   card: {
     padding: 15,
-    borderRadius: 14,
-    border: "1px solid #eee",
-    background: "rgba(255,255,255,0.4)",
-    boxShadow: "0 6px 15px rgba(0,0,0,0.05)",
-  },
-
-  dateRow: {
+    border: "1px solid #ddd",
+    borderRadius: 10,
     marginBottom: 10,
   },
 
-  stats: {
-    display: "flex",
-    flexDirection: "column",
-    gap: 10,
-  },
+  row: { display: "flex", gap: 10 },
 
-  statBox: {
+  input: {
+    flex: 1,
     padding: 10,
+    borderRadius: 8,
+    border: "1px solid #ddd",
+  },
+
+  addBtn: {
+    padding: "10px 15px",
+    background: "#2563eb",
+    color: "white",
+    border: "none",
+    borderRadius: 8,
+  },
+
+  summary: {
+    padding: 10,
+    background: "#f3f4f6",
     borderRadius: 10,
+    marginBottom: 10,
+  },
+
+  cardItem: {
+    display: "flex",
+    justifyContent: "space-between",
+    padding: 10,
     border: "1px solid #eee",
-    background: "rgba(255,255,255,0.6)",
+    borderRadius: 8,
+    marginBottom: 8,
   },
 
-  label: {
-    fontSize: 12,
-    color: "#666",
-    marginBottom: 5,
-  },
-
-  note: {
-    marginTop: 10,
-    fontSize: 12,
-    color: "#888",
+  delBtn: {
+    background: "#ef4444",
+    color: "white",
+    border: "none",
+    padding: "6px 10px",
+    borderRadius: 6,
   },
 };

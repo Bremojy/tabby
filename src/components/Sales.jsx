@@ -5,221 +5,256 @@ export default function Sales() {
   const [products, setProducts] = useState([]);
   const [sales, setSales] = useState([]);
   const [summaries, setSummaries] = useState([]);
+const [editId, setEditId] = useState(null);
+ const today = new Date().toISOString().split("T")[0];
 
-  // 🔐 FIXED ROLE DETECTION (STANDARDIZED)
-  const role = localStorage.getItem("auth_role") || "staff";
+const reopenKey = `reopened_${today}`;
 
-  const [selected, setSelected] = useState("");
-  const [qty, setQty] = useState("");
-  const [editId, setEditId] = useState(null);
-  const today = new Date().toISOString().split("T")[0];
-
-  const reopenKey = `reopened_${today}`;
 const [reopened, setReopened] = useState(
   localStorage.getItem(reopenKey) === "true"
 );
 
-  
+  const [selected, setSelected] = useState("");
+  const [qty, setQty] = useState("");
+
+  const role = localStorage.getItem("auth_role") || "staff";
+
+ 
+
+  /* ================= LOAD DATA ================= */
 useEffect(() => {
-  setProducts(getData("products") || []);
-  setSales(Array.isArray(getData("sales")) ? getData("sales") : []);
-  setSummaries(getData("dailySummary") || []);
+  const loadAll = () => {
+    const productsData = getData("products");
+    const salesData = getData("sales");
+    const summaryData = getData("dailySummary");
+
+    setProducts(Array.isArray(productsData) ? productsData : []);
+    setSales(Array.isArray(salesData) ? salesData : []);
+    setSummaries(Array.isArray(summaryData) ? summaryData : []);
+  };
+
+  loadAll();
+
+  const interval = setInterval(loadAll, 500);
+
+  const sync = () => loadAll();
+
+  window.addEventListener("storage", sync);
+
+  return () => {
+    clearInterval(interval);
+    window.removeEventListener("storage", sync);
+  };
 }, []);
-useEffect(() => {
-  setProducts(getData("products") || []);
-
-  const salesData = getData("sales");
-  setSales(Array.isArray(salesData) ? salesData : []);
-
-  setSummaries(getData("dailySummary") || []);
-}, []);
-
   useEffect(() => {
   const checkReopen = () => {
     setReopened(localStorage.getItem(reopenKey) === "true");
   };
 
-  checkReopen();
-
   const interval = setInterval(checkReopen, 1000);
 
   return () => clearInterval(interval);
 }, [reopenKey]);
+const alreadyClosed =
+  summaries.some((s) => s.date === today) && !reopened;
 
-  const alreadyClosed =
-    summaries.some((s) => s.date === today) && !reopened;
-
-  /* ================= ADD / UPDATE SALE ================= */
-
-const addSale = () => {
-  if (alreadyClosed) return alert("⚠️ Shift is closed");
-
-  const product = products.find((p) => p.id === Number(selected));
-  const quantity = Number(qty);
-
-  if (!product) return alert("Select product");
-  if (!quantity || quantity <= 0) return alert("Enter valid quantity");
-  if (product.stock < quantity) return alert("Not enough stock");
-
-  const total = product.price * quantity;
-  const profit = (product.price - product.cost) * quantity;
-
-  let updatedSales = [...sales]; // ALWAYS SAFE
-
-  if (editId) {
-    updatedSales = sales.map((s) =>
-      s.id === editId
-        ? {
-            ...s,
-            qty: quantity,
-            total,
-            profit,
-          }
-        : s
+  /* ================= ADD SALE ================= */
+  const addSale = () => {
+    if (alreadyClosed)
+  return alert("⚠️ Shift is closed");
+    const product = products.find(
+      (p) => p.id === Number(selected)
     );
-  } else {
-    updatedSales = [
-      ...sales,
-      {
-        id: Date.now(),
-        productId: product.id,
-        name: product.name,
-        qty: quantity,
-        total,
-        profit,
-        date: today,
-      },
-    ];
-  }
 
-  // FIX STOCK UPDATE (SAFE FOR BOTH ADD + EDIT)
-  const oldSale = sales.find((s) => s.id === editId);
+    const quantity = Number(qty);
 
-  const updatedProducts = products.map((p) => {
-    if (p.id !== product.id) return p;
+    if (!product) return alert("Select product");
+    if (!quantity || quantity <= 0)
+      return alert("Invalid quantity");
 
-    if (editId && oldSale) {
-      return {
-        ...p,
-        stock: p.stock + oldSale.qty - quantity,
-      };
-    }
+    if (product.stock < quantity)
+      return alert("Not enough stock");
 
-    return {
-      ...p,
-      stock: p.stock - quantity,
+    const total = product.price * quantity;
+    const profit =
+      (product.price - product.cost) * quantity;
+
+    const newSale = {
+      id: Date.now(),
+      productId: product.id,
+      name: product.name,
+      qty: quantity,
+      total,
+      profit,
+      date: today,
     };
-  });
 
-  setSales(updatedSales);
-  setProducts(updatedProducts);
+    let updatedSales;
 
-  saveData("sales", updatedSales);
-  saveData("products", updatedProducts);
+if (editId) {
+  updatedSales = sales.map((s) =>
+    s.id === editId
+      ? {
+          ...s,
+          qty: quantity,
+          total,
+          profit,
+        }
+      : s
+  );
+} else {
+  updatedSales = [...sales, newSale];
+}
 
-  setSelected("");
-  setQty("");
-  setEditId(null);
-};
+   const updatedProducts = products.map((p) =>
+  p.id === product.id
+    ? {
+        ...p,
+        stock: p.stock - quantity,
+      }
+    : p
+);
 
-  /* ================= SHIFT ACTIONS ================= */
+    setSales(updatedSales);
+    setProducts(updatedProducts);
 
-const closeShift = () => {
-  const todaySales = sales.filter((s) => s.date === today);
+    saveData("sales", updatedSales);
+    saveData("products", updatedProducts);
 
-  if (todaySales.length === 0) {
-    return alert("No sales to close");
-  }
+    window.dispatchEvent(new Event("storage"));
 
-  // Prevent closing twice
-  const existingSummary = summaries.find(
+    setSelected("");
+    setQty("");
+    setEditId(null);
+  };
+
+  /* ================= DELETE ================= */
+  const deleteSale = (id) => {
+    const sale = sales.find((s) => s.id === id);
+
+    if (!sale) return;
+
+    const updatedSales = sales.filter(
+      (s) => s.id !== id
+    );
+
+    const updatedProducts = products.map((p) =>
+      p.id === sale.productId
+        ? {
+            ...p,
+            stock: p.stock + sale.qty,
+          }
+        : p
+    );
+
+    setSales(updatedSales);
+    setProducts(updatedProducts);
+
+    saveData("sales", updatedSales);
+    saveData("products", updatedProducts);
+
+    window.dispatchEvent(new Event("storage"));
+  };
+
+  /* ================= STATS ================= */
+  const todaySales = sales.filter(
     (s) => s.date === today
   );
 
-  if (existingSummary) {
-    return alert("⚠️ Shift already closed");
-  }
+  const totalProfit = todaySales.reduce(
+    (a, b) => a + (b.profit || 0),
+    0
+  );
 
+  const closeShift = () => {
   const summary = {
     date: today,
     totalSales: todaySales.reduce(
-      (sum, sale) => sum + sale.total,
+      (a, b) => a + b.total,
       0
     ),
     totalProfit: todaySales.reduce(
-      (sum, sale) => sum + sale.profit,
+      (a, b) => a + b.profit,
       0
     ),
     itemsSold: todaySales.reduce(
-      (sum, sale) => sum + sale.qty,
+      (a, b) => a + b.qty,
       0
     ),
-
-    // Keep original sales records
     salesData: [...todaySales],
   };
 
-  const updatedSummaries = [
-    ...summaries,
-    summary,
-  ];
+  const updated = [...summaries, summary];
 
-  setSummaries(updatedSummaries);
-  saveData("dailySummary", updatedSummaries);
+  setSummaries(updated);
 
-  // IMPORTANT: keep sales for reopening
-  saveData("sales", sales);
+  saveData("dailySummary", updated);
 
   localStorage.removeItem(reopenKey);
+
   setReopened(false);
 
-  alert("✅ Shift Closed Successfully");
+  alert("✅ Shift Closed");
 };
 
-
 const reopenShift = () => {
-  if (role !== "admin") {
-    return alert("❌ Only admin can reopen shifts");
-  }
+  if (role !== "admin")
+    return alert("Admin only");
 
-  const updatedSummaries = summaries.filter(
+  const updated = summaries.filter(
     (s) => s.date !== today
   );
 
-  setSummaries(updatedSummaries);
-  saveData("dailySummary", updatedSummaries);
+  setSummaries(updated);
+
+  saveData("dailySummary", updated);
 
   localStorage.setItem(reopenKey, "true");
+
   setReopened(true);
 
   alert("🔓 Shift Reopened");
 };
 
-  /* ================= UI ================= */
-
   return (
     <div style={styles.container}>
       {/* HEADER */}
       <div style={styles.header}>
-        <h2>💰 Sales</h2>
+        <div>
+          <h2 style={{ margin: 0 }}>💰 Sales Dashboard</h2>
+          <p style={styles.subText}>Manage daily sales efficiently</p>
+        </div>
 
-        <span
-          style={{
-            ...styles.roleBadge,
-            background: role === "admin" ? "#7c3aed" : "#16a34a",
-          }}
-        >
+        <span style={styles.badge(role)}>
           {role.toUpperCase()}
         </span>
       </div>
 
-      {/* INPUT CARD */}
-      <div style={styles.card}>
-        <h3 style={{ marginBottom: 10 }}>
-          ➕ Add / Update Sale
-        </h3>
+      {/* STATS CARDS */}
+      <div style={styles.statsRow}>
+        <div style={styles.statCard}>
+          <h3>{todaySales.length}</h3>
+          <p>Today Sales</p>
+        </div>
 
-        <div style={styles.formRow}>
+        {role === "admin" && (
+  <div style={styles.statCard}>
+    <h3>Ksh {totalProfit}</h3>
+    <p>Total Profit</p>
+  </div>
+)}
+
+        <div style={styles.statCard}>
+          <h3>{products.length}</h3>
+          <p>Products</p>
+        </div>
+      </div>
+
+      {/* ADD SALE CARD */}
+      <div style={styles.card}>
+        <h3>➕ Add Sale</h3>
+
+        <div style={styles.row}>
           <select
             style={styles.input}
             value={selected}
@@ -227,134 +262,168 @@ const reopenShift = () => {
           >
             <option value="">Select Product</option>
             {products.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name} (Stock: {p.stock})
-              </option>
-            ))}
+  <option key={p.id} value={p.id}>
+    {p.name} (Stock: {p.stock})
+  </option>
+))}
           </select>
 
           <input
             style={styles.input}
             type="number"
-            value={qty}
             placeholder="Qty"
+            value={qty}
             onChange={(e) => setQty(e.target.value)}
           />
+
+          <button style={styles.button} onClick={addSale}>
+  {editId ? "Update" : "Add"}
+</button>
         </div>
-
-        <button style={styles.addBtn} onClick={addSale}>
-          {editId ? "Update Sale" : "Add Sale"}
-        </button>
       </div>
 
-      {/* SHIFT CONTROLS */}
-      <div style={styles.shiftRow}>
-        {!alreadyClosed && (
-          <button style={styles.closeBtn} onClick={closeShift}>
-            🔒 Close Shift
-          </button>
-        )}
+      <div
+  style={{
+    display: "flex",
+    gap: 10,
+    marginTop: 15,
+  }}
+>
+  {!alreadyClosed && (
+    <button
+      style={{
+        ...styles.button,
+        background: "#ef4444",
+      }}
+      onClick={closeShift}
+    >
+      🔒 Close Shift
+    </button>
+  )}
 
-        {role === "admin" && alreadyClosed && (
-          <button style={styles.reopenBtn} onClick={reopenShift}>
-            🔓 Reopen Shift
-          </button>
-        )}
-      </div>
+  {role === "admin" && alreadyClosed && (
+    <button
+      style={{
+        ...styles.button,
+        background: "#22c55e",
+      }}
+      onClick={reopenShift}
+    >
+      🔓 Reopen Shift
+    </button>
+  )}
+</div>
 
       {/* SALES LIST */}
-      <h3 style={{ marginTop: 20 }}>🧾 Today’s Sales</h3>
+      <h3 style={{ marginTop: 20 }}>📊 Today Sales</h3>
 
-      {sales.filter((s) => s.date === today).length === 0 ? (
-        <p style={{ color: "#777" }}>No sales today</p>
+      {todaySales.length === 0 ? (
+        <p style={{ color: "#777" }}>No sales yet</p>
       ) : (
-        sales
-          .filter((s) => s.date === today)
-          .map((s) => (
-            <div key={s.id} style={styles.saleCard}>
-              <div>
-                <b>{s.name}</b>
-
-                <p style={styles.small}>
-                  Qty: {s.qty} | Total: Ksh {s.total}
-                </p>
-
-                {role === "admin" && (
-                  <p style={{ ...styles.small, color: "#22c55e" }}>
-                    Profit: Ksh {s.profit}
-                  </p>
-                )}
-              </div>
-
-              {/* ACTIONS */}
-              {!alreadyClosed && (
-                <div style={styles.btnRow}>
-                  <button
-                    style={styles.editBtn}
-                    onClick={() => {
-                      setEditId(s.id);
-                      setSelected(s.productId);
-                      setQty(s.qty);
-                    }}
-                  >
-                    Edit
-                  </button>
-
-                  <button
-                    style={styles.deleteBtn}
-                    onClick={() => {
-                      const updated = sales.filter(
-                        (x) => x.id !== s.id
-                      );
-                      setSales(updated);
-                      saveData("sales", updated);
-                    }}
-                  >
-                    Delete
-                  </button>
-                </div>
-              )}
+        todaySales.map((s) => (
+  <div key={s.id} style={styles.saleCard}>
+            <div>
+              <b style={{ fontSize: 16 }}>{s.name}</b>
+              <p style={styles.small}>
+                Qty: {s.qty} | Total: Ksh {s.total}
+              </p>
+              {role === "admin" && (
+  <p style={{ ...styles.small, color: "#22c55e" }}>
+    Profit: Ksh {s.profit}
+  </p>
+)}
             </div>
-          ))
+
+<div style={{ display: "flex", gap: 8 }}>
+  {!alreadyClosed && (
+    <>
+      <button
+        style={{
+          ...styles.deleteBtn,
+          background: "#2563eb",
+        }}
+        onClick={() => {
+          setEditId(s.id);
+          setSelected(s.productId);
+          setQty(s.qty);
+        }}
+      >
+        Edit
+      </button>
+
+      <button
+        style={styles.deleteBtn}
+        onClick={() => deleteSale(s.id)}
+      >
+        Delete
+      </button>
+    </>
+  )}
+</div>
+          </div>
+        ))
       )}
     </div>
   );
 }
 
-/* ================= STYLES (NO BACKGROUND CHANGE) ================= */
+/* ================= STYLES ================= */
 
 const styles = {
   container: {
     padding: 20,
     fontFamily: "Arial",
+    background: "#f9fafb",
+    minHeight: "100vh",
   },
 
   header: {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
+    marginBottom: 15,
   },
 
-  roleBadge: {
-    padding: "4px 10px",
+  subText: {
+    margin: 0,
+    color: "#666",
+    fontSize: 13,
+  },
+
+  badge: (role) => ({
+    padding: "6px 12px",
     borderRadius: 20,
     color: "white",
     fontSize: 12,
     fontWeight: "bold",
+    background: role === "admin" ? "#7c3aed" : "#16a34a",
+  }),
+
+  statsRow: {
+    display: "grid",
+    gridTemplateColumns: "repeat(3, 1fr)",
+    gap: 10,
+    marginBottom: 15,
+  },
+
+  statCard: {
+    padding: 15,
+    background: "white",
+    borderRadius: 12,
+    textAlign: "center",
+    boxShadow: "0 3px 10px rgba(0,0,0,0.08)",
   },
 
   card: {
-    marginTop: 15,
     padding: 15,
-    border: "1px solid #ddd",
+    background: "white",
     borderRadius: 12,
-    background: "rgba(255,255,255,0.4)",
+    boxShadow: "0 3px 10px rgba(0,0,0,0.08)",
   },
 
-  formRow: {
+  row: {
     display: "flex",
     gap: 10,
-    marginBottom: 10,
   },
 
   input: {
@@ -365,68 +434,30 @@ const styles = {
     outline: "none",
   },
 
-  addBtn: {
-    padding: 10,
-    width: "100%",
-    border: "none",
-    borderRadius: 10,
-    background: "linear-gradient(135deg, #2563eb, #7c3aed)",
-    color: "white",
-    cursor: "pointer",
-  },
-
-  shiftRow: {
-    display: "flex",
-    gap: 10,
-    marginTop: 10,
-  },
-
-  closeBtn: {
-    padding: 10,
-    border: "none",
-    borderRadius: 8,
-    background: "#ef4444",
-    color: "white",
-    cursor: "pointer",
-  },
-
-  reopenBtn: {
-    padding: 10,
-    border: "none",
-    borderRadius: 8,
-    background: "#22c55e",
-    color: "white",
-    cursor: "pointer",
-  },
-
-  saleCard: {
-    marginTop: 10,
-    padding: 12,
-    border: "1px solid #eee",
-    borderRadius: 10,
-    background: "rgba(255,255,255,0.4)",
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-
-  small: {
-    fontSize: 12,
-    color: "#666",
-  },
-
-  btnRow: {
-    display: "flex",
-    gap: 8,
-  },
-
-  editBtn: {
-    padding: "6px 10px",
+  button: {
+    padding: "10px 15px",
     border: "none",
     borderRadius: 8,
     background: "#2563eb",
     color: "white",
     cursor: "pointer",
+  },
+
+  saleCard: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 12,
+    background: "white",
+    borderRadius: 10,
+    marginBottom: 10,
+    boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+  },
+
+  small: {
+    fontSize: 13,
+    color: "#444",
+    margin: 2,
   },
 
   deleteBtn: {

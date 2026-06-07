@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from "react";
-import { getData, saveData } from "../utils/storage";
+import { useState, useEffect } from "react";
+
+const BASE_URL = "http://localhost:5000/api/products";
 
 export default function Products() {
   const [products, setProducts] = useState([]);
   const [editingId, setEditingId] = useState(null);
   const [search, setSearch] = useState("");
 
-  // ✅ FIXED ROLE DETECTION (MATCHES SALES.JSX)
   const role = (localStorage.getItem("auth_role") || "staff").toLowerCase();
 
   const emptyProduct = {
@@ -19,58 +19,93 @@ export default function Products() {
   const [editFields, setEditFields] = useState(emptyProduct);
   const [newProduct, setNewProduct] = useState(emptyProduct);
 
-useEffect(() => {
-  const loadProducts = () => {
-    const data = getData("products") || [];
+  /* ================= LOAD FROM BACKEND ================= */
+  useEffect(() => {
+    fetchProducts();
+  }, []);
 
-    const sorted = Array.isArray(data)
-      ? [...data].sort((a, b) =>
-          (a.name || "").localeCompare(b.name || "")
-        )
-      : [];
+  const fetchProducts = async () => {
+    try {
+      const res = await fetch(BASE_URL);
+      const data = await res.json();
 
-    setProducts(sorted);
-  };
-
-  loadProducts();
-
-  const interval = setInterval(() => {
-    const latest = getData("products") || [];
-
-    setProducts((current) => {
-      const sorted = [...latest].sort((a, b) =>
+      const sorted = data.sort((a, b) =>
         (a.name || "").localeCompare(b.name || "")
       );
 
-      if (JSON.stringify(current) === JSON.stringify(sorted)) {
-        return current;
-      }
-      return sorted;
-    });
-  }, 1000);
-
-  const handleStorageChange = () => loadProducts();
-
-  window.addEventListener("storage", handleStorageChange);
-
-  return () => {
-    clearInterval(interval);
-    window.removeEventListener("storage", handleStorageChange);
+      setProducts(sorted);
+    } catch (err) {
+      console.log("Error loading products:", err);
+    }
   };
-}, []);
 
-  /* ================= CRUD ================= */
+  /* ================= ADD PRODUCT ================= */
+  const addProduct = async () => {
+    if (role !== "admin") return alert("❌ Staff cannot add products");
 
+    if (!newProduct.name.trim()) return alert("Product name required");
+
+    if (Number(newProduct.price) < Number(newProduct.cost)) {
+      return alert("Selling price cannot be lower than cost");
+    }
+
+    const product = {
+      name: newProduct.name.trim(),
+      stock: Number(newProduct.stock || 0),
+      cost: Number(newProduct.cost || 0),
+      price: Number(newProduct.price || 0),
+    };
+
+    try {
+      await fetch(BASE_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(product),
+      });
+
+      setNewProduct(emptyProduct);
+      fetchProducts();
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
+  /* ================= DELETE ================= */
+  const deleteProduct = async (id) => {
+    if (role !== "admin") return alert("❌ Staff cannot delete products");
+
+    try {
+      await fetch(`${BASE_URL}/${id}`, {
+        method: "DELETE",
+      });
+
+      fetchProducts();
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
+  /* ================= EDIT ================= */
   const startEditing = (product) => {
     if (role !== "admin") return alert("❌ Staff cannot edit products");
 
-    setEditingId(product.id);
-    setEditFields({
-      name: product.name || "",
-      cost: product.cost || "",
-      price: product.price || "",
-      stock: product.stock || "",
-    });
+    setEditingId(product._id);
+    setEditFields(product);
+  };
+
+  const saveEdit = async (id) => {
+    try {
+      await fetch(`${BASE_URL}/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editFields),
+      });
+
+      setEditingId(null);
+      fetchProducts();
+    } catch (err) {
+      console.log(err);
+    }
   };
 
   const cancelEditing = () => {
@@ -78,260 +113,135 @@ useEffect(() => {
     setEditFields(emptyProduct);
   };
 
-const saveEdit = (id) => {
-  const updated = products.map((p) =>
-    p.id === id
-      ? {
-          ...p,
-          name: editFields.name.trim(),
-          stock: Number(editFields.stock || 0),
-          cost: Number(editFields.cost || 0),
-          price: Number(editFields.price || 0),
-        }
-      : p
-  );
-
-  saveData("products", updated);
-  setProducts(updated);
-
-  window.dispatchEvent(new Event("storage"));
-
-  cancelEditing();
-};
-const deleteProduct = (id) => {
-  if (role !== "admin")
-    return alert("❌ Staff cannot delete products");
-
-  const updated = products.filter((p) => p.id !== id);
-
-  saveData("products", updated);
-  setProducts(updated);
-
-  window.dispatchEvent(new Event("storage"));
-};
-
-const addProduct = () => {
-  if (role !== "admin")
-    return alert("❌ Staff cannot add products");
-
-  if (!newProduct.name.trim())
-    return alert("Product name required");
-
-  if (
-  Number(newProduct.price) <
-  Number(newProduct.cost)
-) {
-  return alert(
-    "Selling price cannot be lower than cost"
-  );
-}
-
-  if (
-  Number(newProduct.stock) < 0 ||
-  Number(newProduct.cost) < 0 ||
-  Number(newProduct.price) < 0
-) {
-  return alert("Values cannot be negative");
-}
-
-  const product = {
-    id: Date.now(),
-    name: newProduct.name.trim(),
-    stock: Number(newProduct.stock || 0),
-    cost: Number(newProduct.cost || 0),
-    price: Number(newProduct.price || 0),
-  };
-
-
-  const updated = [...products, product];
-
-  saveData("products", updated);
-  setProducts(updated);
-
-  window.dispatchEvent(new Event("storage"));
-
-  setNewProduct(emptyProduct);
-};
-
-
-
-  /* ================= UI ================= */
-
-  return (
-    <div style={styles.container}>
-      {/* HEADER */}
-     <div style={styles.header}>
-  <h2>📦 Products</h2>
-
-  <span
-    style={{
-      ...styles.roleBadge,
-      background: role === "admin" ? "#7c3aed" : "#16a34a",
-    }}
-  >
-    {role.toUpperCase()}
-  </span>
-</div>
-
-<input
-  style={styles.searchInput}
-  placeholder="🔍 Search products..."
-  value={search}
-  onChange={(e) => setSearch(e.target.value)}
-/>
-
-      {/* ADD PRODUCT (ADMIN ONLY) */}
-      {role === "admin" && (
-        <div style={styles.formCard}>
-          <h3 style={{ marginBottom: 10 }}>➕ Add Product</h3>
-
-          <div style={styles.formGrid}>
-            <input
-              style={styles.input}
-              placeholder="Product Name"
-              value={newProduct.name}
-              onChange={(e) =>
-                setNewProduct({ ...newProduct, name: e.target.value })
-              }
-            />
-
-            <input
-              style={styles.input}
-              type="number"
-              placeholder="Stock"
-              value={newProduct.stock}
-              onChange={(e) =>
-                setNewProduct({ ...newProduct, stock: e.target.value })
-              }
-            />
-
-            <input
-              style={styles.input}
-              type="number"
-              placeholder="Cost"
-              value={newProduct.cost}
-              onChange={(e) =>
-                setNewProduct({ ...newProduct, cost: e.target.value })
-              }
-            />
-
-            <input
-              style={styles.input}
-              type="number"
-              placeholder="Price"
-              value={newProduct.price}
-              onChange={(e) =>
-                setNewProduct({ ...newProduct, price: e.target.value })
-              }
-            />
-          </div>
-
-          <button style={styles.addBtn} onClick={addProduct}>
-            ➕ Add Product
-          </button>
-        </div>
-      )}
-
-      {/* PRODUCT GRID */}
-      <div style={styles.grid}>
-{products
-  .filter((p) =>
+  /* ================= SEARCH ================= */
+  const filteredProducts = products.filter((p) =>
     (p.name || "").toLowerCase().includes(search.toLowerCase())
-  )
-  .map((p) => (
-          <div key={p.id} style={styles.card}>
-            {editingId === p.id ? (
-              <>
-                <input
-                  style={styles.input}
-                  value={editFields.name}
-                  onChange={(e) =>
-                    setEditFields({ ...editFields, name: e.target.value })
-                  }
-                />
-
-                <input
-                  style={styles.input}
-                  value={editFields.stock}
-                  onChange={(e) =>
-                    setEditFields({ ...editFields, stock: e.target.value })
-                  }
-                />
-
-                <input
-                  style={styles.input}
-                  value={editFields.cost}
-                  onChange={(e) =>
-                    setEditFields({ ...editFields, cost: e.target.value })
-                  }
-                />
-
-                <input
-                  style={styles.input}
-                  value={editFields.price}
-                  onChange={(e) =>
-                    setEditFields({ ...editFields, price: e.target.value })
-                  }
-                />
-
-                <div style={styles.btnRow}>
-                  <button style={styles.saveBtn} onClick={() => saveEdit(p.id)}>
-                    Save
-                  </button>
-
-                  <button style={styles.cancelBtn} onClick={cancelEditing}>
-                    Cancel
-                  </button>
-                </div>
-              </>
-            ) : (
-              <>
-                <h3 style={{ marginBottom: 5 }}>{p.name}</h3>
-
-              <p
-  style={{
-    ...styles.text,
-    color: p.stock <= 5 ? "#ef4444" : "#444",
-    fontWeight: p.stock <= 5 ? "bold" : "normal",
-  }}
->
-  Stock: <b>{p.stock}</b>
-  {p.stock <= 5 && " ⚠️ Low Stock"}
-</p>
-                {role === "admin" && (
-  <p style={styles.text}>
-    Cost: <b>{p.cost}</b>
-  </p>
-)}
-                <p style={styles.text}>
-                  Price: <b>{p.price}</b>
-                </p>
-
-{role === "admin" && (
-  <div style={styles.btnRow}>
-    <button
-      style={styles.editBtn}
-      onClick={() => startEditing(p)}
-    >
-      Edit
-    </button>
-
-    <button
-      style={styles.deleteBtn}
-      onClick={() => deleteProduct(p.id)}
-    >
-      Delete
-    </button>
-  </div>
-)}
-              </>
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
   );
+  
+
+  
+  
+  return (
+  <div style={styles.container}>
+    {/* HEADER */}
+    <div style={styles.header}>
+      <h2>📦 Products</h2>
+
+      <span
+        style={{
+          ...styles.roleBadge,
+          background: role === "admin" ? "#7c3aed" : "#16a34a",
+        }}
+      >
+        {role.toUpperCase()}
+      </span>
+    </div>
+
+    {/* SEARCH */}
+    <input
+      style={styles.searchInput}
+      placeholder="🔍 Search products..."
+      value={search}
+      onChange={(e) => setSearch(e.target.value)}
+    />
+
+    {/* ADD PRODUCT (ADMIN ONLY) */}
+    {role === "admin" && (
+      <div style={styles.formCard}>
+        <h3 style={{ marginBottom: 10 }}>➕ Add Product</h3>
+
+        <div style={styles.formGrid}>
+          <input
+            style={styles.input}
+            placeholder="Product Name"
+            value={newProduct.name}
+            onChange={(e) =>
+              setNewProduct({ ...newProduct, name: e.target.value })
+            }
+          />
+
+          <input
+            style={styles.input}
+            type="number"
+            placeholder="Stock"
+            value={newProduct.stock}
+            onChange={(e) =>
+              setNewProduct({ ...newProduct, stock: e.target.value })
+            }
+          />
+
+          <input
+            style={styles.input}
+            type="number"
+            placeholder="Cost"
+            value={newProduct.cost}
+            onChange={(e) =>
+              setNewProduct({ ...newProduct, cost: e.target.value })
+            }
+          />
+
+          <input
+            style={styles.input}
+            type="number"
+            placeholder="Price"
+            value={newProduct.price}
+            onChange={(e) =>
+              setNewProduct({ ...newProduct, price: e.target.value })
+            }
+          />
+        </div>
+
+        <button style={styles.addBtn} onClick={addProduct}>
+          ➕ Add Product
+        </button>
+      </div>
+    )}
+
+    {/* PRODUCTS */}
+    <div style={styles.grid}>
+      {filteredProducts.map((p) => (
+        <div key={p._id || p.id} style={styles.card}>
+          <h3 style={{ marginBottom: 5 }}>{p.name}</h3>
+
+          <p style={styles.text}>
+            Stock: <b>{p.stock}</b>
+          </p>
+
+          {role === "admin" && (
+            <p style={styles.text}>
+              Cost: <b>{p.cost}</b>
+            </p>
+          )}
+
+          <p style={styles.text}>
+            Price: <b>{p.price}</b>
+          </p>
+
+          {role === "admin" && (
+            <div style={styles.btnRow}>
+              <button
+                style={styles.editBtn}
+                onClick={() => startEditing(p)}
+              >
+                Edit
+              </button>
+
+              <button
+                style={styles.deleteBtn}
+                onClick={() => deleteProduct(p._id || p.id)}
+              >
+                Delete
+              </button>
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  </div>
+); 
 }
+// ================= RETURN DATA ================= 
+  
 
 /* ================= STYLES ================= */
 

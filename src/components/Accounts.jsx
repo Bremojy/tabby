@@ -1,41 +1,73 @@
 import React, { useState, useEffect } from "react";
 
+const BASE_URL = "http://localhost:5000/api/users";
+
 export default function Accounts() {
   const [users, setUsers] = useState([]);
   const [visiblePasswords, setVisiblePasswords] = useState({});
 
-  useEffect(() => {
-    const savedUsers =
-      JSON.parse(localStorage.getItem("users")) || [];
-
-    setUsers(savedUsers);
-  }, []);
-
   const role = localStorage.getItem("auth_role");
 
+  /* ================= LOAD USERS ================= */
+  useEffect(() => {
+    if (role !== "admin") return;
+
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    try {
+      const token = localStorage.getItem("token");
+
+      const res = await fetch(BASE_URL, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        setUsers(data);
+      } else {
+        console.log(data);
+      }
+    } catch (err) {
+      console.log("Error loading users:", err);
+    }
+  };
+
+  /* ================= ACCESS CONTROL ================= */
   if (role !== "admin") {
     return <h3>⛔ Access Denied</h3>;
   }
 
-  const togglePassword = (index) => {
+  /* ================= TOGGLE PASSWORD ================= */
+  const togglePassword = (id) => {
     setVisiblePasswords((prev) => ({
       ...prev,
-      [index]: !prev[index],
+      [id]: !prev[id],
     }));
   };
 
-  const deleteUser = (username) => {
-    if (!window.confirm(`Delete ${username}?`)) return;
+  /* ================= DELETE USER ================= */
+  const deleteUser = async (id) => {
+    if (!window.confirm("Delete this user?")) return;
 
-    const updatedUsers = users.filter(
-      (u) => u.username !== username
-    );
+    try {
+      const token = localStorage.getItem("token");
 
-    setUsers(updatedUsers);
-    localStorage.setItem(
-      "users",
-      JSON.stringify(updatedUsers)
-    );
+      await fetch(`${BASE_URL}/${id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      fetchUsers();
+    } catch (err) {
+      console.log("Delete error:", err);
+    }
   };
 
   return (
@@ -45,9 +77,9 @@ export default function Accounts() {
       {users.length === 0 ? (
         <p>No accounts found</p>
       ) : (
-        users.map((user, index) => (
+        users.map((user) => (
           <div
-            key={index}
+            key={user._id}
             style={{
               padding: 15,
               marginBottom: 12,
@@ -58,20 +90,18 @@ export default function Accounts() {
             }}
           >
             <p>
-              <strong>Username:</strong>{" "}
-              {user.username}
+              <strong>Username:</strong> {user.username}
             </p>
 
             <p>
               <strong>Password:</strong>{" "}
-              {visiblePasswords[index]
-                ? user.password
+              {visiblePasswords[user._id]
+                ? "Protected"
                 : "••••••••"}
             </p>
 
             <p>
-              <strong>Role:</strong>{" "}
-              {user.role}
+              <strong>Role:</strong> {user.role}
             </p>
 
             <div
@@ -82,9 +112,7 @@ export default function Accounts() {
               }}
             >
               <button
-                onClick={() =>
-                  togglePassword(index)
-                }
+                onClick={() => togglePassword(user._id)}
                 style={{
                   padding: "6px 12px",
                   border: "none",
@@ -94,15 +122,13 @@ export default function Accounts() {
                   cursor: "pointer",
                 }}
               >
-                {visiblePasswords[index]
+                {visiblePasswords[user._id]
                   ? "Hide Password"
                   : "Show Password"}
               </button>
 
               <button
-                onClick={() =>
-                  deleteUser(user.username)
-                }
+                onClick={() => deleteUser(user._id)}
                 style={{
                   padding: "6px 12px",
                   border: "none",

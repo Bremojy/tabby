@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 
+const BASE_URL = "http://localhost:5000/api/auth/login";
+
 export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -7,48 +9,52 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
 
-  const login = () => {
+  const login = async () => {
     setLoading(true);
     setMessage(null);
 
-    setTimeout(() => {
-      const ADMIN_USERNAME = "Admin";
-      const ADMIN_PASSWORD = "Nimda#";
+    try {
+      const res = await fetch(BASE_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ username, password }),
+      });
 
-      // ADMIN LOGIN
-      if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-        localStorage.setItem("loggedInUser", username);
-        localStorage.setItem("auth_role", "admin");
+      const data = await res.json();
 
-        setMessage({ type: "success", text: "Welcome Admin Mode 🔐" });
-        setTimeout(() => window.location.reload(), 800);
+      if (!res.ok) {
+        setMessage({
+          type: "error",
+          text: data.message || data.error || "Login failed",
+        });
         setLoading(false);
         return;
       }
 
-      // NORMAL USERS
-      const users = JSON.parse(localStorage.getItem("users")) || [];
+      // SAVE LOGIN SESSION
+      localStorage.setItem("loggedInUser", data.user.username);
+localStorage.setItem("auth_role", data.user.role);
+localStorage.setItem("token", data.token);
+      
 
-  const user = users.find(
-  (u) =>
-    u.username.toLowerCase() === username.toLowerCase() &&
-    u.password === password
-);
+      setMessage({
+        type: "success",
+        text: "Login successful!",
+      });
 
-      if (!user) {
-        setMessage({ type: "error", text: "Invalid username or password" });
-        setLoading(false);
-        return;
-      }
-
-      localStorage.setItem("loggedInUser", user.username);
-      localStorage.setItem("auth_role", user.role || "staff");
-
-      setMessage({ type: "success", text: "Login successful!" });
       setLoading(false);
 
       setTimeout(() => window.location.reload(), 800);
-    }, 700);
+    } catch (err) {
+      setMessage({
+        type: "error",
+        text: "Server error. Try again later.",
+      });
+
+      setLoading(false);
+    }
   };
 
   return (
@@ -57,25 +63,23 @@ export default function Login() {
         <h2 style={styles.title}>🔐 Welcome Back</h2>
         <p style={styles.subtitle}>Login to your Tabby POS account</p>
 
-        {/* USERNAME */}
-      <input
-  style={styles.input}
-  placeholder="Username"
-  value={username}
-  onChange={(e) => setUsername(e.target.value)}
-  onKeyDown={(e) => e.key === "Enter" && login()}
-/>
+        <input
+          style={styles.input}
+          placeholder="Username"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && login()}
+        />
 
-        {/* PASSWORD */}
         <div style={styles.passwordBox}>
-<input
-  style={styles.input}
-  placeholder="Password"
-  type={showPassword ? "text" : "password"}
-  value={password}
-  onChange={(e) => setPassword(e.target.value)}
-  onKeyDown={(e) => e.key === "Enter" && login()}
-/>
+          <input
+            style={styles.input}
+            placeholder="Password"
+            type={showPassword ? "text" : "password"}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && login()}
+          />
 
           <span
             onClick={() => setShowPassword(!showPassword)}
@@ -85,7 +89,6 @@ export default function Login() {
           </span>
         </div>
 
-        {/* BUTTON */}
         <button
           onClick={login}
           disabled={loading}
@@ -98,11 +101,13 @@ export default function Login() {
           {loading ? "Logging in..." : "Login"}
         </button>
 
-        {/* MESSAGE */}
         {message && (
           <p
             style={{
-              color: message.type === "error" ? "#ef4444" : "#22c55e",
+              color:
+                message.type === "error"
+                  ? "#ef4444"
+                  : "#22c55e",
               marginTop: 10,
               fontWeight: "bold",
             }}
@@ -115,7 +120,7 @@ export default function Login() {
   );
 }
 
-/* STYLES */
+/* STYLES (UNCHANGED) */
 const styles = {
   wrapper: {
     height: "80vh",
@@ -180,3 +185,4 @@ const styles = {
     marginTop: 5,
   },
 };
+
