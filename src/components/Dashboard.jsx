@@ -10,13 +10,22 @@ export default function Dashboard() {
 
   const username = localStorage.getItem("loggedInUser") || "User";
   const role = localStorage.getItem("auth_role") || "staff";
+  const PRODUCT_URL = "https://tabby-shop-backend.onrender.com/api/products";
+
+const [products, setProducts] = useState([]);
 
   /* ================= LOAD ================= */
   useEffect(() => {
+  fetchSales();
+  fetchProducts();
+
+  const interval = setInterval(() => {
     fetchSales();
-    const interval = setInterval(fetchSales, 5000);
-    return () => clearInterval(interval);
-  }, []);
+    fetchProducts();
+  }, 5000);
+
+  return () => clearInterval(interval);
+}, []);
 
   const fetchSales = async () => {
   try {
@@ -42,6 +51,17 @@ export default function Dashboard() {
 };
 
   const toTime = (date) => new Date(date).getTime();
+
+  const fetchProducts = async () => {
+  try {
+    const res = await fetch(PRODUCT_URL);
+    const data = await res.json();
+    setProducts(Array.isArray(data) ? data : []);
+  } catch (err) {
+    console.log("Product error:", err);
+    setProducts([]);
+  }
+};
 
   /* ================= FILTER ================= */
   const filteredSales =
@@ -76,6 +96,16 @@ export default function Dashboard() {
     0
   );
 
+const lowStock = (products || []).filter(
+  p => (p.stock || 0) > 0 && (p.stock || 0) < 10
+);
+const outOfStock = products.filter(p => p.stock === 0);
+
+const inventoryValue = (products || []).reduce(
+  (sum, p) => sum + ((p.price || 0) * (p.stock || 0)),
+  0
+);
+
   const uniqueProducts = new Set(
   filteredSales.map((s) => s.productId)
 ).size;
@@ -83,7 +113,7 @@ export default function Dashboard() {
 const today = new Date().toISOString().split("T")[0];
 
 const todayTransactions = filteredSales.filter(
-  (s) => s.date === today
+  (s) => new Date(s.date).toISOString().split("T")[0] === today
 ).length;
 
   const formatKsh = (v) =>
@@ -141,6 +171,18 @@ const todayTransactions = filteredSales.filter(
         </div>
       </div>
 
+  {role === "admin" && (
+  <div style={styles.alertBox}>
+    {outOfStock.length > 0 && (
+      <p>⛔ {outOfStock.length} product(s) OUT OF STOCK</p>
+    )}
+
+    {lowStock.length > 0 && (
+      <p>⚠️ {lowStock.length} product(s) LOW STOCK</p>
+    )}
+  </div>
+)}
+
       {/* STATS */}
       <div style={styles.grid}>
   <div style={styles.statCard}>
@@ -156,7 +198,13 @@ const todayTransactions = filteredSales.filter(
   <div style={styles.statCard}>
     <h2>{todayTransactions}</h2>
     <p>Today's Transactions</p>
+
   </div>
+
+  <div style={styles.statCard}>
+  <h2>Ksh {inventoryValue.toLocaleString()}</h2>
+  <p>Inventory Value</p>
+</div>
 
   <div style={styles.statCard}>
     <h2>{uniqueProducts}</h2>
@@ -263,6 +311,19 @@ dateInput: {
   padding: 10,
   borderRadius: 10,
   border: "1px solid #ddd",
+},
+
+alertBox: {
+  background: "#fff7ed",
+  border: "1px solid #fed7aa",
+  padding: 12,
+  borderRadius: 10,
+  marginBottom: 15,
+  color: "#9a3412",
+  fontWeight: "bold",
+  display: "flex",
+  flexDirection: "column",
+  gap: "6px",
 },
 
 resetBtn: {

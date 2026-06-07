@@ -263,7 +263,14 @@ export default function Products() {
       <>
         <h3 style={{ marginBottom: 5 }}>{p.name}</h3>
 
-        <p style={styles.text}>Stock: <b>{p.stock}</b></p>
+        <p style={styles.text}>
+  Stock: <b>{p.stock}</b>{" "}
+  {role === "admin" && p.stock < 10 && (
+    <span style={styles.lowStock}>
+      ⚠️ LOW STOCK
+    </span>
+  )}
+</p>
 
         {role === "admin" && (
           <p style={styles.text}>Cost: <b>{p.cost}</b></p>
@@ -306,6 +313,16 @@ const styles = {
     padding: 20,
     fontFamily: "Arial",
   },
+
+  lowStock: {
+  marginLeft: 8,
+  padding: "2px 6px",
+  fontSize: 11,
+  borderRadius: 6,
+  background: "#fee2e2",
+  color: "#dc2626",
+  fontWeight: "bold",
+},
 
   header: {
     display: "flex",
