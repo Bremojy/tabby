@@ -111,11 +111,14 @@ router.delete("/:id", verifyToken, async (req, res) => {
     res.json({
       message: "Deleted successfully",
     });
-  } catch (err) {
-    res.status(500).json({
-      error: err.message,
-    });
-  }
+  }catch (err) {
+  console.error("CREATE SALE ERROR:", err);
+
+  res.status(500).json({
+    error: err.message,
+    stack: err.stack,
+  });
+}
 });
 
 /* ================= UPDATE SALE ================= */
