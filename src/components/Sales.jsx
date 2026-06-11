@@ -41,7 +41,20 @@ useEffect(() => {
   const loadAll = async () => {
     await loadProducts();
 
-    const salesData = getData("sales") || [];
+    const res = await fetch(
+  "https://tabby-shop-backend.onrender.com/api/sales",
+  {
+    headers: {
+      Authorization:
+        "Bearer " +
+        localStorage.getItem("token"),
+    },
+  }
+);
+
+
+const salesData = await res.json();
+setSales(salesData);
     const summaryData =
       getData("dailySummary") || [];
 
@@ -64,99 +77,135 @@ const alreadyClosed =
   summaries.some((s) => s.date === today) && !reopened;
 
   /* ================= ADD SALE ================= */
-  const addSale = () => {
-    if (alreadyClosed)
-  return alert("⚠️ Shift is closed");
-    const product = products.find(
-  (p) =>
-    String(p._id) === String(selected) ||
-    String(p.id) === String(selected)
-);
+  const addSale = async () => {
+  if (alreadyClosed)
+    return alert("⚠️ Shift is closed");
 
-    const quantity = Number(qty);
-
-    console.log("Selected ID:", selected);
-console.log("Products:", products);
-
-    if (!product) return alert("Select product");
-    if (!quantity || quantity <= 0)
-      return alert("Invalid quantity");
-
-    if (product.stock < quantity)
-      return alert("Not enough stock");
-
-    const total = product.price * quantity;
-    const profit =
-      (product.price - product.cost) * quantity;
-
-    const newSale = {
-      id: Date.now(),
-      productId: product._id || product.id,
-      name: product.name,
-      qty: quantity,
-      total,
-      profit,
-      date: today,
-    };
-
- let updatedSales = [];
-let updatedProducts = [...products];
-
-if (editId) {
-  const oldSale = sales.find(
-    (s) => s.id === editId
+  const product = products.find(
+    (p) =>
+      String(p._id) === String(selected) ||
+      String(p.id) === String(selected)
   );
 
-  const stockDifference =
-    quantity - oldSale.qty;
+  const quantity = Number(qty);
 
-  updatedSales = sales.map((s) =>
-    s.id === editId
-      ? {
-          ...s,
+  console.log("Selected ID:", selected);
+  console.log("Products:", products);
+
+  if (!product) return alert("Select product");
+
+  if (!quantity || quantity <= 0)
+    return alert("Invalid quantity");
+
+  if (product.stock < quantity)
+    return alert("Not enough stock");
+
+  try {
+    /* ================= EDIT SALE ================= */
+    if (editId) {
+      const updateRes = await fetch(
+        `https://tabby-shop-backend.onrender.com/api/sales/${editId}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization:
+              "Bearer " +
+              localStorage.getItem("token"),
+          },
+          body: JSON.stringify({
+            qty: quantity,
+          }),
+        }
+      );
+
+      const updateData = await updateRes.json();
+
+      if (!updateRes.ok) {
+        return alert(
+          updateData.error || "Failed to update sale"
+        );
+      }
+
+      await loadProducts();
+
+      const salesRes = await fetch(
+        "https://tabby-shop-backend.onrender.com/api/sales",
+        {
+          headers: {
+            Authorization:
+              "Bearer " +
+              localStorage.getItem("token"),
+          },
+        }
+      );
+
+      const salesData = await salesRes.json();
+
+      setSales(salesData);
+
+      setSelected("");
+      setQty("");
+      setEditId(null);
+
+      alert("✅ Sale updated");
+
+      return;
+    }
+
+    /* ================= ADD SALE ================= */
+    const addRes = await fetch(
+      "https://tabby-shop-backend.onrender.com/api/sales",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization:
+            "Bearer " +
+            localStorage.getItem("token"),
+        },
+        body: JSON.stringify({
+          productId: product._id,
           qty: quantity,
-          total,
-          profit,
-        }
-      : s
-  );
+        }),
+      }
+    );
 
-  updatedProducts = products.map((p) =>
-    (p._id || p.id) ===
-    (product._id || product.id)
-      ? {
-          ...p,
-          stock: p.stock - stockDifference,
-        }
-      : p
-  );
-} else {
-  updatedSales = [...sales, newSale];
+    const addData = await addRes.json();
 
-  updatedProducts = products.map((p) =>
-    (p._id || p.id) ===
-    (product._id || product.id)
-      ? {
-          ...p,
-          stock: p.stock - quantity,
-        }
-      : p
-  );
-}
+    if (!addRes.ok) {
+      return alert(
+        addData.error || "Failed to save sale"
+      );
+    }
 
+    await loadProducts();
 
-    setSales(updatedSales);
-    setProducts(updatedProducts);
+    const salesRes = await fetch(
+      "https://tabby-shop-backend.onrender.com/api/sales",
+      {
+        headers: {
+          Authorization:
+            "Bearer " +
+            localStorage.getItem("token"),
+        },
+      }
+    );
 
-    saveData("sales", updatedSales);
-    saveData("products", updatedProducts);
+    const salesData = await salesRes.json();
 
-    window.dispatchEvent(new Event("storage"));
+    setSales(salesData);
 
     setSelected("");
     setQty("");
     setEditId(null);
-  };
+
+    alert("✅ Sale added");
+  } catch (err) {
+    console.error(err);
+    alert("Server error");
+  }
+};
 
   /* ================= DELETE ================= */
   const deleteSale = (id) => {
