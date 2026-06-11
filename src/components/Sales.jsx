@@ -41,6 +41,7 @@ useEffect(() => {
   const loadAll = async () => {
     await loadProducts();
 
+
     const res = await fetch(
   "https://tabby-shop-backend.onrender.com/api/sales",
   {
@@ -53,7 +54,10 @@ useEffect(() => {
 );
 
 
-const salesData = await res.json();
+const salesData = Array.isArray(await res.json())
+  ? await res.json()
+  : [];
+
 setSales(salesData);
     const summaryData =
       getData("dailySummary") || [];
@@ -128,6 +132,7 @@ const alreadyClosed =
       }
 
       await loadProducts();
+      window.dispatchEvent(new Event("storage"));
 
       const salesRes = await fetch(
         "https://tabby-shop-backend.onrender.com/api/sales",
@@ -180,6 +185,7 @@ const alreadyClosed =
     }
 
     await loadProducts();
+    window.dispatchEvent(new Event("storage"));
 
     const salesRes = await fetch(
       "https://tabby-shop-backend.onrender.com/api/sales",
@@ -208,46 +214,65 @@ const alreadyClosed =
 };
 
   /* ================= DELETE ================= */
-  const deleteSale = (id) => {
-    const sale = sales.find((s) => s.id === id);
-
-    if (!sale) return;
-
-    const updatedSales = sales.filter(
-      (s) => s.id !== id
+  const deleteSale = async (id) => {
+  try {
+    const res = await fetch(
+      `https://tabby-shop-backend.onrender.com/api/sales/${id}`,
+      {
+        method: "DELETE",
+        headers: {
+          Authorization:
+            "Bearer " + localStorage.getItem("token"),
+        },
+      }
     );
 
-    const updatedProducts = products.map((p) =>
-      (p._id || p.id) === sale.productId
-        ? {
-            ...p,
-            stock: p.stock + sale.qty,
-          }
-        : p
+    const data = await res.json();
+
+    if (!res.ok) {
+      return alert(data.error || "Failed to delete sale");
+    }
+
+    await loadProducts();
+
+    const salesRes = await fetch(
+      "https://tabby-shop-backend.onrender.com/api/sales",
+      {
+        headers: {
+          Authorization:
+            "Bearer " + localStorage.getItem("token"),
+        },
+      }
     );
 
-    setSales(updatedSales);
-    setProducts(updatedProducts);
-
-    saveData("sales", updatedSales);
-    saveData("products", updatedProducts);
+    setSales(await salesRes.json());
 
     window.dispatchEvent(new Event("storage"));
-  };
+
+    alert("✅ Sale deleted");
+  } catch (err) {
+    console.error(err);
+    alert("Server error");
+  }
+};
+
+  
 
   /* ================= STATS ================= */
   const todaySales = sales.filter(
-    (s) => s.date === today
-  );
+  (s) =>
+    s.date &&
+    s.date.slice(0, 10) === today
+);
   const totalSalesAmount = todaySales.reduce(
-  (sum, sale) => sum + sale.total,
+  (sum, sale) => sum + Number(sale.total || 0),
   0
 );
 
   const totalProfit = todaySales.reduce(
-    (a, b) => a + (b.profit || 0),
-    0
-  );
+  (sum, sale) => sum + Number(sale.profit || 0),
+  0
+);
 
   const closeShift = () => {
   const summary = {
@@ -420,7 +445,7 @@ const reopenShift = () => {
         <p style={{ color: "#777" }}>No sales yet</p>
       ) : (
         todaySales.map((s) => (
-  <div key={s.id} style={styles.saleCard}>
+  <div key={s._id} style={styles.saleCard}>
             <div>
               <b style={{ fontSize: 16 }}>{s.name}</b>
               <p style={styles.small}>
@@ -442,8 +467,8 @@ const reopenShift = () => {
           background: "#2563eb",
         }}
         onClick={() => {
-          setEditId(s.id);
-          setSelected(s.productId);
+          setEditId(s._id);
+          setSelected(String(s.productId));
           setQty(s.qty);
         }}
       >
@@ -452,7 +477,7 @@ const reopenShift = () => {
 
       <button
         style={styles.deleteBtn}
-        onClick={() => deleteSale(s.id)}
+        onClick={() => deleteSale(s._id)}
       >
         Delete
       </button>

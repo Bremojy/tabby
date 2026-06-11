@@ -42,6 +42,7 @@ router.delete("/:id", async (req, res) => {
 // UPDATE product
 router.put("/:id", async (req, res) => {
   try {
+    
     const updated = await Product.findByIdAndUpdate(
       req.params.id,
       req.body,

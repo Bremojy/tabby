@@ -23,6 +23,17 @@ export default function Products() {
   useEffect(() => {
     fetchProducts();
   }, []);
+  useEffect(() => {
+  const refreshProducts = () => {
+    fetchProducts();
+  };
+
+  window.addEventListener("storage", refreshProducts);
+
+  return () => {
+    window.removeEventListener("storage", refreshProducts);
+  };
+}, []);
 
   const fetchProducts = async () => {
     try {
@@ -175,15 +186,19 @@ export default function Products() {
             }
           />
 
-          <input
-            style={styles.input}
-            type="number"
-            placeholder="Cost"
-            value={newProduct.cost}
-            onChange={(e) =>
-              setNewProduct({ ...newProduct, cost: e.target.value })
-            }
-          />
+          {role === "admin" && (
+  <input
+    style={styles.input}
+    type="number"
+    value={editFields.cost}
+    onChange={(e) =>
+      setEditFields({
+        ...editFields,
+        cost: e.target.value,
+      })
+    }
+  />
+)}
 
           <input
             style={styles.input}
