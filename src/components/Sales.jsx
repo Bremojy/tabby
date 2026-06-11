@@ -176,7 +176,14 @@ const alreadyClosed =
       }
     );
 
-    const addData = await addRes.json();
+    const text = await addRes.text();
+
+console.log("SERVER RESPONSE:", text);
+
+let addData = {};
+try {
+  addData = JSON.parse(text);
+} catch {}
 
     if (!addRes.ok) {
       return alert(

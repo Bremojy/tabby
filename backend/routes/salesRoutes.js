@@ -5,20 +5,20 @@ import { verifyToken } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-/* ================= CREATE SALE ================= */
-router.post("/", verifyToken, async (req, res) => {
+/* ================= CREATE SALE ================= */router.post("/", verifyToken, async (req, res) => {
   try {
+    console.log("SALE BODY:", req.body);
+
     const { productId, qty, date } = req.body;
+
+    console.log("productId:", productId);
+    console.log("qty:", qty);
 
     const quantity = Number(qty);
 
-    if (!productId || !quantity || quantity <= 0) {
-      return res.status(400).json({
-        error: "Invalid product or quantity",
-      });
-    }
-
     const product = await Product.findById(productId);
+
+    console.log("FOUND PRODUCT:", product);
 
     if (!product) {
       return res.status(404).json({
@@ -26,14 +26,11 @@ router.post("/", verifyToken, async (req, res) => {
       });
     }
 
-    if (Number(product.stock) < quantity) {
-      return res.status(400).json({
-        error: "Not enough stock",
-      });
-    }
-
     const price = Number(product.price || 0);
     const cost = Number(product.cost || 0);
+
+    console.log("price:", price);
+    console.log("cost:", cost);
 
     const total = price * quantity;
     const profit = (price - cost) * quantity;
@@ -49,6 +46,8 @@ router.post("/", verifyToken, async (req, res) => {
         new Date().toISOString().split("T")[0],
     });
 
+    console.log("SALE CREATED:", sale);
+
     product.stock =
       Number(product.stock) - quantity;
 
@@ -60,6 +59,7 @@ router.post("/", verifyToken, async (req, res) => {
 
     res.status(500).json({
       error: err.message,
+      stack: err.stack,
     });
   }
 });
@@ -91,10 +91,15 @@ router.delete("/:id", verifyToken, async (req, res) => {
         error: "Sale not found",
       });
     }
+    console.log("REQ BODY:", req.body);
+    console.log("PRODUCT ID:", productId);
+    if (!mongoose.Types.ObjectId.isValid(productId)) {
+  return res.status(400).json({
+    error: "Invalid product id",
+  });
+}
 
-    const product = await Product.findById(
-      sale.productId
-    );
+const product = await Product.findById(productId);
 
     if (product) {
       product.stock =
