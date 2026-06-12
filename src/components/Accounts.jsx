@@ -4,19 +4,20 @@ const BASE_URL = "https://tabby-shop-backend.onrender.com/api/users";
 
 export default function Accounts() {
   const [users, setUsers] = useState([]);
-  const [visiblePasswords, setVisiblePasswords] = useState({});
+  const [loading, setLoading] = useState(false);
 
   const role = localStorage.getItem("auth_role");
 
-  /* ================= LOAD USERS ================= */
   useEffect(() => {
-    if (role !== "admin") return;
-
-    fetchUsers();
+    if (role === "admin") {
+      fetchUsers();
+    }
   }, []);
 
   const fetchUsers = async () => {
     try {
+      setLoading(true);
+
       const token = localStorage.getItem("token");
 
       const res = await fetch(BASE_URL, {
@@ -32,25 +33,23 @@ export default function Accounts() {
       } else {
         console.log(data);
       }
+
+      setLoading(false);
     } catch (err) {
       console.log("Error loading users:", err);
+      setLoading(false);
     }
   };
 
-  /* ================= ACCESS CONTROL ================= */
   if (role !== "admin") {
-    return <h3>⛔ Access Denied</h3>;
+    return (
+      <div style={{ padding: 20 }}>
+        <h3>⛔ Access Denied</h3>
+        <p>Only admin can view accounts</p>
+      </div>
+    );
   }
 
-  /* ================= TOGGLE PASSWORD ================= */
-  const togglePassword = (id) => {
-    setVisiblePasswords((prev) => ({
-      ...prev,
-      [id]: !prev[id],
-    }));
-  };
-
-  /* ================= DELETE USER ================= */
   const deleteUser = async (id) => {
     if (!window.confirm("Delete this user?")) return;
 
@@ -74,7 +73,9 @@ export default function Accounts() {
     <div style={{ padding: 20 }}>
       <h2>👥 Staff Accounts</h2>
 
-      {users.length === 0 ? (
+      {loading ? (
+        <p>Loading users...</p>
+      ) : users.length === 0 ? (
         <p>No accounts found</p>
       ) : (
         users.map((user) => (
@@ -95,9 +96,7 @@ export default function Accounts() {
 
             <p>
               <strong>Password:</strong>{" "}
-              {visiblePasswords[user._id]
-                ? "Protected"
-                : "••••••••"}
+              🔒 Hidden (stored securely)
             </p>
 
             <p>
@@ -111,22 +110,6 @@ export default function Accounts() {
                 marginTop: 10,
               }}
             >
-              <button
-                onClick={() => togglePassword(user._id)}
-                style={{
-                  padding: "6px 12px",
-                  border: "none",
-                  borderRadius: 6,
-                  background: "#2563eb",
-                  color: "white",
-                  cursor: "pointer",
-                }}
-              >
-                {visiblePasswords[user._id]
-                  ? "Hide Password"
-                  : "Show Password"}
-              </button>
-
               <button
                 onClick={() => deleteUser(user._id)}
                 style={{
