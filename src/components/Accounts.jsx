@@ -7,6 +7,7 @@ export default function Accounts() {
   const [loading, setLoading] = useState(false);
 
   const role = localStorage.getItem("auth_role");
+  const currentUserId = localStorage.getItem("user_id"); // 👈 ADD THIS
 
   useEffect(() => {
     if (role === "admin") {
@@ -51,6 +52,11 @@ export default function Accounts() {
   }
 
   const deleteUser = async (id) => {
+    if (id === currentUserId) {
+      alert("⚠️ You cannot delete your own admin account!");
+      return;
+    }
+
     if (!window.confirm("Delete this user?")) return;
 
     try {
@@ -78,54 +84,64 @@ export default function Accounts() {
       ) : users.length === 0 ? (
         <p>No accounts found</p>
       ) : (
-        users.map((user) => (
-          <div
-            key={user._id}
-            style={{
-              padding: 15,
-              marginBottom: 12,
-              border: "1px solid #ddd",
-              borderRadius: 10,
-              background: "#fff",
-              boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
-            }}
-          >
-            <p>
-              <strong>Username:</strong> {user.username}
-            </p>
+        users.map((user) => {
+          const isSelf = user._id === currentUserId;
 
-            <p>
-              <strong>Password:</strong>{" "}
-              🔒 Hidden (stored securely)
-            </p>
-
-            <p>
-              <strong>Role:</strong> {user.role}
-            </p>
-
+          return (
             <div
+              key={user._id}
               style={{
-                display: "flex",
-                gap: 10,
-                marginTop: 10,
+                padding: 15,
+                marginBottom: 12,
+                border: "1px solid #ddd",
+                borderRadius: 10,
+                background: "#fff",
+                boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
               }}
             >
-              <button
-                onClick={() => deleteUser(user._id)}
+              <p>
+                <strong>Username:</strong> {user.username}
+              </p>
+
+              <p>
+                <strong>Password:</strong> 🔒 Hidden (stored securely)
+              </p>
+
+              <p>
+                <strong>Role:</strong> {user.role}
+              </p>
+
+              {isSelf && (
+                <p style={{ color: "red", fontSize: 12 }}>
+                  ⚠️ This is your account (cannot be deleted)
+                </p>
+              )}
+
+              <div
                 style={{
-                  padding: "6px 12px",
-                  border: "none",
-                  borderRadius: 6,
-                  background: "#ef4444",
-                  color: "white",
-                  cursor: "pointer",
+                  display: "flex",
+                  gap: 10,
+                  marginTop: 10,
                 }}
               >
-                Delete Account
-              </button>
+                <button
+                  onClick={() => deleteUser(user._id)}
+                  disabled={isSelf}
+                  style={{
+                    padding: "6px 12px",
+                    border: "none",
+                    borderRadius: 6,
+                    background: isSelf ? "#9ca3af" : "#ef4444",
+                    color: "white",
+                    cursor: isSelf ? "not-allowed" : "pointer",
+                  }}
+                >
+                  Delete Account
+                </button>
+              </div>
             </div>
-          </div>
-        ))
+          );
+        })
       )}
     </div>
   );

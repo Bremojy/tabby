@@ -3,17 +3,6 @@ import React, { useState } from "react";
 export default function Signup() {
   const role = localStorage.getItem("auth_role");
 
-  if (role !== "admin") {
-    return (
-      <div style={styles.wrapper}>
-        <div style={styles.card}>
-          <h2>⛔ Access Denied</h2>
-          <p>Only admins can create staff accounts</p>
-        </div>
-      </div>
-    );
-  }
-
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -21,21 +10,24 @@ export default function Signup() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
 
+  if (role !== "admin") {
+    return (
+      <div style={styles.center}>
+        <div style={styles.deniedCard}>
+          <h2>⛔ Access Denied</h2>
+          <p>Only admins can create staff accounts</p>
+        </div>
+      </div>
+    );
+  }
+
   const registerUser = async () => {
     if (!username || !password || !confirmPassword) {
-      setMessage({
-        type: "error",
-        text: "All fields are required",
-      });
-      return;
+      return setMessage({ type: "error", text: "All fields are required" });
     }
 
     if (password !== confirmPassword) {
-      setMessage({
-        type: "error",
-        text: "Passwords do not match",
-      });
-      return;
+      return setMessage({ type: "error", text: "Passwords do not match" });
     }
 
     setLoading(true);
@@ -61,169 +53,181 @@ export default function Signup() {
       const data = await res.json();
 
       if (!res.ok) {
-        setMessage({
-          type: "error",
-          text: data.error || "Signup failed",
-        });
-        setLoading(false);
-        return;
+        setMessage({ type: "error", text: data.error || "Signup failed" });
+        return setLoading(false);
       }
 
-      setMessage({
-        type: "success",
-        text: "Staff created successfully 🎉",
-      });
+      setMessage({ type: "success", text: "Staff created successfully 🎉" });
 
       setUsername("");
       setPassword("");
       setConfirmPassword("");
-      setLoading(false);
     } catch (err) {
-      setMessage({
-        type: "error",
-        text: "Server error",
-      });
+      setMessage({ type: "error", text: "Server error" });
+    } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div style={styles.wrapper}>
+    <div style={styles.page}>
       <div style={styles.card}>
         <h2 style={styles.title}>👤 Create Staff Account</h2>
+        <p style={styles.subtitle}>Register a new team member</p>
 
-        <p style={styles.subtitle}>Register a new staff member</p>
-
-        {/* ✅ PASSWORD RULE GUIDE ADDED HERE */}
-        <div
-          style={{
-            padding: 12,
-            marginBottom: 15,
-            borderRadius: 10,
-            background: "#fef3c7",
-            border: "1px solid #f59e0b",
-            fontSize: 14,
-            color: "#92400e",
-            textAlign: "left",
-          }}
-        >
-          <strong>⚠️ Password Rule Guide:</strong>
-          <br />
-          When creating accounts, ensure passwords:
-          <ul style={{ marginTop: 8 }}>
-            <li>Start with a <b>CAPITAL letter</b></li>
-            <li>Include <b>numbers</b> (0-9)</li>
-            <li>Include a <b>special character</b> (!@#$%^&*)</li>
-            <li>Be at least <b>8 characters long</b></li>
+        {/* PASSWORD RULE BOX */}
+        <div style={styles.guide}>
+          <strong>⚠️ Password Rules</strong>
+          <ul>
+            <li>Start with CAPITAL letter</li>
+            <li>Include numbers (0-9)</li>
+            <li>Include special character (!@#$%)</li>
+            <li>Minimum 8 characters</li>
           </ul>
-
-          <p style={{ marginTop: 8 }}>
-            Example: <b>Admin@123</b> or <b>Karen#2024</b>
+          <p style={{ marginTop: 6 }}>
+            Example: <b>Admin@123</b>
           </p>
         </div>
 
-        <input
-          style={styles.input}
-          placeholder="Username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-        />
-
-        <div style={styles.passwordBox}>
+        {/* INPUTS */}
+        <div style={styles.form}>
           <input
             style={styles.input}
-            placeholder="Password"
-            type={showPassword ? "text" : "password"}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
           />
 
-          <span
-            style={styles.eye}
-            onClick={() => setShowPassword(!showPassword)}
-          >
-            {showPassword ? "🙈" : "👁️"}
-          </span>
-        </div>
+          <div style={styles.passwordWrap}>
+            <input
+              style={styles.input}
+              placeholder="Password"
+              type={showPassword ? "text" : "password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
 
-        <input
-          style={styles.input}
-          placeholder="Confirm Password"
-          type={showPassword ? "text" : "password"}
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-        />
+            <span
+              style={styles.eye}
+              onClick={() => setShowPassword(!showPassword)}
+            >
+              {showPassword ? "🙈" : "👁️"}
+            </span>
+          </div>
 
-        <button
-          onClick={registerUser}
-          disabled={loading}
-          style={{
-            ...styles.button,
-            opacity: loading ? 0.7 : 1,
-          }}
-        >
-          {loading ? "Creating Account..." : "Create Staff"}
-        </button>
+          <input
+            style={styles.input}
+            placeholder="Confirm Password"
+            type={showPassword ? "text" : "password"}
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+          />
 
-        {message && (
-          <p
+          <button
+            onClick={registerUser}
+            disabled={loading}
             style={{
-              marginTop: 12,
-              fontWeight: "bold",
-              color: message.type === "error" ? "#ef4444" : "#22c55e",
+              ...styles.button,
+              opacity: loading ? 0.6 : 1,
             }}
           >
-            {message.text}
-          </p>
-        )}
+            {loading ? "Creating..." : "Create Staff"}
+          </button>
+
+          {message && (
+            <div
+              style={{
+                ...styles.message,
+                background:
+                  message.type === "error" ? "#fee2e2" : "#dcfce7",
+                color: message.type === "error" ? "#b91c1c" : "#166534",
+              }}
+            >
+              {message.text}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
+/* ================= STYLES ================= */
 const styles = {
-  wrapper: {
-    height: "80vh",
+  page: {
+    minHeight: "100vh",
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    background: "linear-gradient(135deg, #111827, #1f2937)",
+    background: "linear-gradient(135deg, #0f172a, #1e293b, #0f172a)",
+    padding: 20,
+  },
+
+  center: {
+    minHeight: "100vh",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    background: "#0f172a",
+    color: "white",
+  },
+
+  deniedCard: {
+    padding: 25,
+    borderRadius: 12,
+    background: "#1f2937",
+    textAlign: "center",
   },
 
   card: {
-    width: 350,
-    padding: 25,
+    width: "100%",
+    maxWidth: 420,
+    padding: 28,
     borderRadius: 18,
     background: "rgba(255,255,255,0.08)",
-    backdropFilter: "blur(12px)",
-    boxShadow: "0 10px 30px rgba(0,0,0,0.4)",
+    backdropFilter: "blur(18px)",
+    border: "1px solid rgba(255,255,255,0.1)",
+    boxShadow: "0 20px 60px rgba(0,0,0,0.4)",
     color: "white",
-    textAlign: "center",
   },
 
   title: {
     marginBottom: 5,
+    fontSize: 22,
   },
 
   subtitle: {
     fontSize: 13,
-    opacity: 0.75,
+    opacity: 0.7,
     marginBottom: 20,
+  },
+
+  guide: {
+    background: "rgba(245, 158, 11, 0.15)",
+    border: "1px solid #f59e0b",
+    padding: 12,
+    borderRadius: 12,
+    fontSize: 13,
+    marginBottom: 15,
+  },
+
+  form: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 12,
   },
 
   input: {
     width: "100%",
     padding: 12,
-    marginBottom: 12,
     borderRadius: 10,
-    border: "1px solid rgba(255,255,255,0.2)",
-    outline: "none",
+    border: "1px solid rgba(255,255,255,0.15)",
     background: "rgba(255,255,255,0.05)",
     color: "white",
-    boxSizing: "border-box",
+    outline: "none",
   },
 
-  passwordBox: {
+  passwordWrap: {
     position: "relative",
   },
 
@@ -236,14 +240,21 @@ const styles = {
   },
 
   button: {
-    width: "100%",
     padding: 12,
-    border: "none",
     borderRadius: 10,
-    background: "linear-gradient(135deg, #2563eb, #7c3aed)",
+    border: "none",
+    background: "linear-gradient(135deg, #6366f1, #a855f7)",
     color: "white",
     fontWeight: "bold",
     cursor: "pointer",
-    marginTop: 5,
+    transition: "0.2s",
+  },
+
+  message: {
+    marginTop: 10,
+    padding: 10,
+    borderRadius: 10,
+    fontSize: 13,
+    textAlign: "center",
   },
 };
