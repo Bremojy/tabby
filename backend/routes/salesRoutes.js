@@ -92,15 +92,9 @@ router.delete("/:id", verifyToken, async (req, res) => {
         error: "Sale not found",
       });
     }
-    console.log("REQ BODY:", req.body);
-    console.log("PRODUCT ID:", productId);
-    if (!mongoose.Types.ObjectId.isValid(productId)) {
-  return res.status(400).json({
-    error: "Invalid product id",
-  });
-}
-
-const product = await Product.findById(productId);
+const product = await Product.findById(
+  sale.productId
+);
 
     if (product) {
       product.stock =
@@ -147,6 +141,17 @@ router.put("/:id", verifyToken, async (req, res) => {
     );
 
     if (!product) {
+      if (quantity <= 0) {
+  return res.status(400).json({
+    error: "Invalid quantity",
+  });
+}
+
+if (Number(product.stock) < quantity) {
+  return res.status(400).json({
+    error: "Not enough stock",
+  });
+}
       return res.status(404).json({
         error: "Product not found",
       });

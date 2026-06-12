@@ -1,55 +1,62 @@
 import express from "express";
 import Product from "../models/Product.js";
-import { verifyToken } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// CREATE product
+/* CREATE PRODUCT */
 router.post("/", async (req, res) => {
-
-    router.get("/", verifyToken, async (req, res) => { })
-router.put("/:id", verifyToken, async (req, res) => { })
-router.delete("/:id", verifyToken, async (req, res) => { }) 
   try {
-    const product = await Product.create(req.body);
-    res.json(product);
+    const product = await Product.create({
+      name: req.body.name,
+      price: Number(req.body.price || 0),
+      cost: Number(req.body.cost || 0),
+      stock: Number(req.body.stock || 0),
+    });
+
+    res.status(201).json(product);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
- 
 });
 
-// GET all products
+/* GET PRODUCTS */
 router.get("/", async (req, res) => {
   try {
-    const products = await Product.find();
+    const products = await Product.find().sort({ name: 1 });
     res.json(products);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// DELETE product
-router.delete("/:id", async (req, res) => {
+/* UPDATE PRODUCT */
+router.put("/:id", async (req, res) => {
   try {
-    await Product.findByIdAndDelete(req.params.id);
-    res.json({ message: "Deleted" });
+    const updated = await Product.findByIdAndUpdate(
+      req.params.id,
+      {
+        ...req.body,
+        price: Number(req.body.price),
+        cost: Number(req.body.cost),
+        stock: Number(req.body.stock),
+      },
+      { new: true, runValidators: true }
+    );
+
+    res.json(updated);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// UPDATE product
-router.put("/:id", async (req, res) => {
+/* DELETE PRODUCT */
+router.delete("/:id", async (req, res) => {
   try {
-    
-    const updated = await Product.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true }
-    );
+    await Product.findByIdAndDelete(req.params.id);
 
-    res.json(updated);
+    res.json({
+      message: "Deleted successfully",
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
