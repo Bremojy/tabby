@@ -7,12 +7,10 @@ export default function Accounts() {
   const [loading, setLoading] = useState(false);
 
   const role = localStorage.getItem("auth_role");
-  const currentUserId = localStorage.getItem("user_id"); // 👈 ADD THIS
+  const currentUserId = localStorage.getItem("user_id");
 
   useEffect(() => {
-    if (role === "admin") {
-      fetchUsers();
-    }
+    if (role === "admin") fetchUsers();
   }, []);
 
   const fetchUsers = async () => {
@@ -22,127 +20,209 @@ export default function Accounts() {
       const token = localStorage.getItem("token");
 
       const res = await fetch(BASE_URL, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       const data = await res.json();
 
-      if (res.ok) {
-        setUsers(data);
-      } else {
-        console.log(data);
-      }
+      if (res.ok) setUsers(data);
 
       setLoading(false);
     } catch (err) {
-      console.log("Error loading users:", err);
+      console.log(err);
       setLoading(false);
     }
   };
 
   if (role !== "admin") {
     return (
-      <div style={{ padding: 20 }}>
-        <h3>⛔ Access Denied</h3>
-        <p>Only admin can view accounts</p>
+      <div style={styles.center}>
+        <div style={styles.card}>
+          <h2>⛔ Access Denied</h2>
+          <p>Only admin can view accounts</p>
+        </div>
       </div>
     );
   }
 
   const deleteUser = async (id) => {
     if (id === currentUserId) {
-      alert("⚠️ You cannot delete your own admin account!");
+      alert("You cannot delete your own account!");
       return;
     }
 
     if (!window.confirm("Delete this user?")) return;
 
-    try {
-      const token = localStorage.getItem("token");
+    const token = localStorage.getItem("token");
 
-      await fetch(`${BASE_URL}/${id}`, {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+    await fetch(`${BASE_URL}/${id}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
 
-      fetchUsers();
-    } catch (err) {
-      console.log("Delete error:", err);
-    }
+    fetchUsers();
   };
 
   return (
-    <div style={{ padding: 20 }}>
-      <h2>👥 Staff Accounts</h2>
+    <div style={styles.page}>
+      <h2 style={styles.title}>👥 Staff Accounts</h2>
 
       {loading ? (
-        <p>Loading users...</p>
+        <div style={styles.loading}>Loading users...</div>
       ) : users.length === 0 ? (
-        <p>No accounts found</p>
+        <div style={styles.empty}>No accounts found</div>
       ) : (
-        users.map((user) => {
-          const isSelf = user._id === currentUserId;
+        <div style={styles.grid}>
+          {[...users]
+            .sort((a, b) => a.username.localeCompare(b.username))
+            .map((user) => {
+              const isSelf = user._id === currentUserId;
 
-          return (
-            <div
-              key={user._id}
-              style={{
-                padding: 15,
-                marginBottom: 12,
-                border: "1px solid #ddd",
-                borderRadius: 10,
-                background: "#fff",
-                boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
-              }}
-            >
-              <p>
-                <strong>Username:</strong> {user.username}
-              </p>
+              return (
+                <div key={user._id} style={styles.cardHover}>
+                  <div style={styles.header}>
+                    <div style={styles.avatar}>
+                      {user.username?.charAt(0).toUpperCase()}
+                    </div>
 
-              <p>
-                <strong>Password:</strong> 🔒 Hidden (stored securely)
-              </p>
+                    <div>
+                      <h3 style={styles.username}>{user.username}</h3>
+                      <span style={styles.role}>{user.role}</span>
+                    </div>
+                  </div>
 
-              <p>
-                <strong>Role:</strong> {user.role}
-              </p>
+                  <div style={styles.info}>
+                    <p>🔒 Password hidden & secured</p>
+                  </div>
 
-              {isSelf && (
-                <p style={{ color: "red", fontSize: 12 }}>
-                  ⚠️ This is your account (cannot be deleted)
-                </p>
-              )}
+                  {isSelf && (
+                    <p style={styles.warning}>
+                      ⚠️ This is your account
+                    </p>
+                  )}
 
-              <div
-                style={{
-                  display: "flex",
-                  gap: 10,
-                  marginTop: 10,
-                }}
-              >
-                <button
-                  onClick={() => deleteUser(user._id)}
-                  disabled={isSelf}
-                  style={{
-                    padding: "6px 12px",
-                    border: "none",
-                    borderRadius: 6,
-                    background: isSelf ? "#9ca3af" : "#ef4444",
-                    color: "white",
-                    cursor: isSelf ? "not-allowed" : "pointer",
-                  }}
-                >
-                  Delete Account
-                </button>
-              </div>
-            </div>
-          );
-        })
+                  <button
+                    onClick={() => deleteUser(user._id)}
+                    disabled={isSelf}
+                    style={{
+                      ...styles.button,
+                      background: isSelf ? "#9ca3af" : "#ef4444",
+                      cursor: isSelf ? "not-allowed" : "pointer",
+                    }}
+                  >
+                    Delete Account
+                  </button>
+                </div>
+              );
+            })}
+        </div>
       )}
     </div>
   );
 }
+
+/* ========== STYLES ========== */
+const styles = {
+  page: {
+    padding: 25,
+    background: "#f4f6fb",
+    minHeight: "100vh",
+    fontFamily: "Arial, sans-serif",
+  },
+
+  title: {
+    fontSize: 24,
+    marginBottom: 20,
+    fontWeight: "bold",
+  },
+
+  grid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+    gap: 15,
+  },
+
+  cardHover: {
+    background: "#fff",
+    padding: 18,
+    borderRadius: 14,
+    boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+    transition: "0.2s ease",
+  },
+
+  header: {
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 10,
+  },
+
+  avatar: {
+    width: 42,
+    height: 42,
+    borderRadius: "50%",
+    background: "#2563eb",
+    color: "white",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontWeight: "bold",
+  },
+
+  username: {
+    margin: 0,
+    fontSize: 16,
+  },
+
+  role: {
+    fontSize: 12,
+    padding: "3px 8px",
+    background: "#e5e7eb",
+    borderRadius: 8,
+  },
+
+  info: {
+    fontSize: 13,
+    color: "#555",
+    marginBottom: 10,
+  },
+
+  warning: {
+    color: "red",
+    fontSize: 12,
+    marginBottom: 10,
+  },
+
+  button: {
+    width: "100%",
+    padding: "8px",
+    border: "none",
+    borderRadius: 8,
+    color: "white",
+    fontWeight: "bold",
+  },
+
+  loading: {
+    padding: 20,
+  },
+
+  empty: {
+    padding: 20,
+    color: "#666",
+  },
+
+  center: {
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    height: "80vh",
+  },
+
+  card: {
+    background: "#fff",
+    padding: 30,
+    borderRadius: 12,
+    boxShadow: "0 4px 10px rgba(0,0,0,0.1)",
+    textAlign: "center",
+  },
+};
