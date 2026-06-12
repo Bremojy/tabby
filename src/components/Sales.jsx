@@ -39,31 +39,38 @@ const [reopened, setReopened] = useState(
   /* ================= LOAD DATA ================= */
 useEffect(() => {
   const loadAll = async () => {
-    await loadProducts();
+    try {
+      await loadProducts();
 
+      const res = await fetch(
+        "https://tabby-shop-backend.onrender.com/api/sales",
+        {
+          headers: {
+            Authorization:
+              "Bearer " +
+              localStorage.getItem("token"),
+          },
+        }
+      );
 
-    const res = await fetch(
-  "https://tabby-shop-backend.onrender.com/api/sales",
-  {
-    headers: {
-      Authorization:
-        "Bearer " +
-        localStorage.getItem("token"),
-    },
-  }
-);
+      const salesData = await res.json();
 
+      setSales(
+        Array.isArray(salesData)
+          ? salesData
+          : []
+      );
 
-const salesData = Array.isArray(await res.json())
-  ? await res.json()
-  : [];
+      const summaryData =
+        getData("dailySummary") || [];
 
-setSales(salesData);
-    const summaryData =
-      getData("dailySummary") || [];
-
-    setSales(salesData);
-    setSummaries(summaryData);
+      setSummaries(summaryData);
+    } catch (err) {
+      console.error(
+        "Failed loading sales",
+        err
+      );
+    }
   };
 
   loadAll();
@@ -266,6 +273,7 @@ try {
   
 
   /* ================= STATS ================= */
+  console.log("Loaded Sales:", sales);
   const todaySales = sales.filter(
   (s) =>
     s.date &&
