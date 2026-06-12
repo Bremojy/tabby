@@ -188,16 +188,17 @@ export default function Products() {
 
           {role === "admin" && (
   <input
-    style={styles.input}
-    type="number"
-    value={editFields.cost}
-    onChange={(e) =>
-      setEditFields({
-        ...editFields,
-        cost: e.target.value,
-      })
-    }
-  />
+  style={styles.input}
+  type="number"
+  placeholder="Cost"
+  value={newProduct.cost}
+  onChange={(e) =>
+    setNewProduct({
+      ...newProduct,
+      cost: e.target.value,
+    })
+  }
+/>
 )}
 
           <input
