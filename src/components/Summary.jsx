@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { getData } from "../utils/storage";
+// remove getData completely
 
 export default function Summary() {
 
-  const [summaries, setSummaries] = useState([]);
+  const [sales, setSales] = useState([]);
   const [selectedMonth, setSelectedMonth] = useState("");
   const [expandedDate, setExpandedDate] = useState(null);
 
@@ -12,30 +12,55 @@ export default function Summary() {
     .toLowerCase();
 
   useEffect(() => {
-    const data = getData("dailySummary") || [];
-    setSummaries(data);
-  }, []);
+  loadSales();
+}, []);
 
-  const groupedMonths = summaries.reduce((acc, item) => {
-    const month = item.date.slice(0, 7);
+const loadSales = async () => {
+  try {
+    const token = localStorage.getItem("token");
 
-    if (!acc[month]) {
-      acc[month] = {
-        sales: 0,
-        profit: 0,
-        items: 0,
-        days: [],
-      };
-    }
+    const res = await fetch(
+      "https://tabby-shop-backend.onrender.com/api/sales",
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
 
-    acc[month].sales += item.totalSales || 0;
-    acc[month].profit += item.totalProfit || 0;
-    acc[month].items += item.itemsSold || 0;
+    const data = await res.json();
 
-    acc[month].days.push(item);
+    setSales(Array.isArray(data) ? data : []);
+  } catch (err) {
+    console.error("Failed loading sales", err);
+    setSales([]);
+  }
+};
 
-    return acc;
-  }, {});
+  const groupedMonths = sales.reduce((acc, sale) => {
+  const month = sale.date.slice(0, 7);
+
+  if (!acc[month]) {
+    acc[month] = {
+      sales: 0,
+      profit: 0,
+      items: 0,
+      days: {},
+    };
+  }
+
+  acc[month].sales += Number(sale.total || 0);
+  acc[month].profit += Number(sale.profit || 0);
+  acc[month].items += Number(sale.qty || 0);
+
+  if (!acc[month].days[sale.date]) {
+    acc[month].days[sale.date] = [];
+  }
+
+  acc[month].days[sale.date].push(sale);
+
+  return acc;
+}, {});
 
   return (
     <div style={styles.container}>
@@ -101,9 +126,10 @@ export default function Summary() {
 
       {selectedMonth === month && (
         <div style={styles.details}>
-          {data.days.map((day) => (
+          {Object.entries(data.days).map(
+  ([date, daySales]) => (
             <div
-              key={day.date}
+              key={date}
               style={styles.dayCard}
             >
               <div
@@ -112,26 +138,26 @@ export default function Summary() {
                   justifyContent: "space-between",
                 }}
               >
-                <b>{day.date}</b>
+                <b>{date}</b>
 
                 <button
                   style={styles.smallBtn}
                   onClick={() =>
                     setExpandedDate(
-                      expandedDate === day.date
-                        ? null
-                        : day.date
-                    )
+  expandedDate === date
+    ? null
+    : date
+)
                   }
                 >
-                  {expandedDate === day.date
+                  {expandedDate === date
                     ? "Hide"
                     : "View Items"}
                 </button>
               </div>
 
-              {expandedDate === day.date &&
-                day.salesData?.map((sale) => (
+              {expandedDate === date &&
+                daySales.map((sale) => (
                   <div
                     key={sale.id}
                     style={styles.saleRow}
